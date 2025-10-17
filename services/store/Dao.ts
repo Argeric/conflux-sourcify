@@ -332,6 +332,7 @@ export class Dao {
       {
         type: QueryTypes.SELECT,
         replacements: [chain, address],
+        logging: sql => {console.log(`debug DAO ===1=== ${sql}`)}
       },
     );
 

@@ -649,6 +649,7 @@ export class StoreService extends StoreBase implements RWStorageService {
         retrievedContract.deployment.deployer,
       );
     }
+    console.log(`debug getContract ===1=== ${JSON.stringify(result)}`)
 
     return result;
   };
