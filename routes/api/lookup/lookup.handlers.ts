@@ -101,6 +101,7 @@ export async function getContractEndpoint(
     fields,
     omit,
   );
+  console.log(`debug getContractEndpoint ===1=== ${JSON.stringify(contract)}`)
 
   if (!contract.match) {
     res.status(StatusCodes.NOT_FOUND).json(contract);
