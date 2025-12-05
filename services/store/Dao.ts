@@ -123,8 +123,11 @@ export class Dao {
       metadata,
       license_type,
       contract_label,
+      similar_match_chain_id,
+      similar_match_address,
     }: Omit<Tables.ISourcifyMatch, "created_at" | "id">,
     oldVerifiedContractId: number,
+    dbTx?: Transaction,
   ) {
     const metadataStr = JSON.stringify(metadata);
     return this.pool.query(
@@ -135,11 +138,14 @@ export class Dao {
         runtime_match=?,
         license_type=?,
         contract_label=?,
-        metadata=?
+        metadata=?,
+        similar_match_chain_id=?,
+        similar_match_address=?
       WHERE  verified_contract_id = ?
       `,
       {
         type: QueryTypes.UPDATE,
+        transaction: dbTx,
         replacements: [
           verified_contract_id,
           creation_match,
@@ -147,6 +153,8 @@ export class Dao {
           license_type || CONST.LICENSES.None.code,
           contract_label || null,
           metadataStr,
+          similar_match_chain_id || null,
+          similar_match_address || null,
           oldVerifiedContractId,
         ],
       },
@@ -852,13 +860,13 @@ export class Dao {
       WHERE 1=1 
         AND chain_id = ?
         AND address = ?
-        AND transaction_hash = ?
         AND contract_id = ?
+        ${transaction_hash ? 'AND transaction_hash = ?' : ''}
       `,
       {
         type: QueryTypes.SELECT,
         transaction: dbTx,
-        replacements: [chain_id, address, transaction_hash, contract_id],
+        replacements: [...[chain_id, address, contract_id], ...(transaction_hash ? [transaction_hash] : [])],
       },
     );
 
@@ -912,13 +920,18 @@ export class Dao {
 
   async getContractDeploymentByRuntimeCodeHash(
     codeHash: string,
+    linkChainIds?: number[],
   ): Promise<Tables.IContractDeployment | null> {
     const records = await this.pool.query(
       `
         SELECT
-          cd.*
-        FROM contract_deployments cd
-        JOIN contracts c ON cd.contract_id = c.id and c.runtime_code_hash = ?
+          d.*
+        FROM contract_deployments d
+        JOIN contracts c ON d.contract_id = c.id
+        WHERE
+          c.runtime_code_hash = ?
+          ${linkChainIds?.length ? `AND d.chain_id in (${linkChainIds.join(",")})` : ''}
+        ORDER BY d.id asc limit 1
       `,
       {
         type: QueryTypes.SELECT,
@@ -1087,7 +1100,7 @@ export class Dao {
     | "error_code"
     | "error_id"
     | "error_data"
-  >): Promise<void> {
+  >, dbTx?: Transaction): Promise<void> {
     const errorDataStr = JSON.stringify(error_data);
     await this.pool.query(
       `
@@ -1103,6 +1116,7 @@ export class Dao {
       `,
       {
         type: QueryTypes.UPDATE,
+        transaction: dbTx,
         replacements: [
           completed_at,
           verified_contract_id,

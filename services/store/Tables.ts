@@ -668,6 +668,8 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
     | "metadata"
     | "license_type"
     | "contract_label"
+    | "similar_match_chain_id"
+    | "similar_match_address"
   > &
     Pick<
       Tables.ICompiledContract,
@@ -761,6 +763,8 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
     "DATE_FORMAT(sourcify_matches.created_at, '%Y-%m-%dT%H:%i:%sT') as verified_at",
   license_type: "sourcify_matches.license_type",
   contract_label: "sourcify_matches.contract_label",
+  similar_match_chain_id: "sourcify_matches.similar_match_chain_id",
+  similar_match_address: "sourcify_matches.similar_match_address",
   address: "nullif(contract_deployments.address, '0x') as address",
   onchain_creation_code:
     "nullif(CONVERT(onchain_creation_code.code USING utf8), '0x') as onchain_creation_code",
@@ -891,8 +895,11 @@ export const FIELDS_TO_STORED_PROPERTIES: Record<
   creationMatch: "creation_match",
   runtimeMatch: "runtime_match",
   verifiedAt: "verified_at",
+  name: "name",
   licenseType: "license_type",
   contractLabel: "contract_label",
+  similarMatchChainId: "similar_match_chain_id",
+  similarMatchAddress: "similar_match_address",
   creationBytecode: {
     onchainBytecode: "onchain_creation_code",
     recompiledBytecode: "recompiled_creation_code",

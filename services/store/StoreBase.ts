@@ -289,34 +289,41 @@ export default class StoreBase {
     chainId: number,
     address: string,
     codeHash: string,
-  ): Promise<number> {
+    linkChainIds?: number[],
+    jobData?: {
+      verificationId: VerificationJobId;
+      finishTime: Date;
+    },
+  ) {
+    const contractDeployment =
+      await this.database.getContractDeploymentByRuntimeCodeHash(codeHash, linkChainIds);
+    if (!contractDeployment) {
+      throw new Error("Failed to find contract-deployment.");
+    }
+
+    const verifiedContract =
+      await this.database.getVerifiedContractByContractDeploymentId(
+        contractDeployment.id,
+      );
+    if (!verifiedContract) {
+      throw new Error("Failed to find verified-contract.");
+    }
+
+    const sourcifyMatch =
+      await this.database.getSourcifyMatchByVerifiedContractId(
+        verifiedContract.id,
+      );
+    if (!sourcifyMatch) {
+      throw new Error("Failed to find sourcify-match.");
+    }
+
+    const { sequelize } = Tables.VerifiedContract;
+    if (!sequelize) {
+      throw new Error("Failed to init the sequelize.");
+    }
+
     try {
-      const contractDeployment =
-        await this.database.getContractDeploymentByRuntimeCodeHash(codeHash);
-      if (!contractDeployment) {
-        throw new Error("Failed to find contract-deployment.");
-      }
-      const verifiedContract =
-        await this.database.getVerifiedContractByContractDeploymentId(
-          contractDeployment.id,
-        );
-      if (!verifiedContract) {
-        throw new Error("Failed to find verified-contract.");
-      }
-      const sourcifyMatch =
-        await this.database.getSourcifyMatchByVerifiedContractId(
-          verifiedContract.id,
-        );
-      if (!sourcifyMatch) {
-        throw new Error("Failed to find sourcify-match.");
-      }
-
-      const { sequelize } = Tables.VerifiedContract;
-      if (!sequelize) {
-        throw new Error("Failed to init the sequelize.");
-      }
-
-      return sequelize.transaction(async (dbTx) => {
+      await sequelize.transaction(async (dbTx) => {
         const deployment = await this.database.insertContractDeployment(
           {
             chain_id: chainId,
@@ -325,6 +332,7 @@ export default class StoreBase {
           },
           dbTx,
         );
+
         const verified = await this.database.insertVerifiedContract(
           {
             ...verifiedContract,
@@ -332,15 +340,31 @@ export default class StoreBase {
           },
           dbTx,
         );
-        return this.database.insertSourcifyMatch(
-          {
-            ...sourcifyMatch,
+
+        const newMatch = {
+          ...sourcifyMatch,
+          verified_contract_id: verified.id,
+          similar_match_chain_id: contractDeployment.chain_id,
+          similar_match_address: contractDeployment.address,
+        };
+        const oldMatch = await this.database.getSourcifyMatchByVerifiedContractId(verified.id);
+        if(oldMatch) {
+          await this.database.updateSourcifyMatch(newMatch, verified.id, dbTx);
+        } else {
+          await this.database.insertSourcifyMatch(newMatch, dbTx);
+        }
+
+        if(jobData) {
+          await this.database.updateVerificationJob({
+            id: jobData.verificationId,
+            completed_at: jobData.finishTime,
             verified_contract_id: verified.id,
-            similar_match_chain_id: contractDeployment.chain_id,
-            similar_match_address: contractDeployment.address,
-          },
-          dbTx,
-        );
+            compilation_time: null,
+            error_code: null,
+            error_id: null,
+            error_data: null,
+          }, dbTx);
+        }
       });
     } catch (e) {
       throw new Error(

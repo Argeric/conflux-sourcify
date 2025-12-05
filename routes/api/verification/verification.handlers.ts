@@ -160,6 +160,9 @@ interface VerifyFromCrossChainRequest extends Request {
     chainId: string;
     address: string;
   };
+  body: {
+    linkChainIds?: string;
+  };
 }
 
 export async function verifyFromCrossChainEndpoint(
@@ -173,12 +176,14 @@ export async function verifyFromCrossChainEndpoint(
 
   const services = req.app.get("services") as Services;
   const chain = getChainId(req.params.chainId);
+  const linkChainIds = req.body?.linkChainIds?.split(",").map(Number).filter(Boolean);
 
   const verificationId =
     await services.verification.verifyFromCrossChainViaWorker(
       req.baseUrl + req.path,
       chain,
       req.params.address,
+      linkChainIds,
     );
 
   res.status(StatusCodes.ACCEPTED).json({ verificationId });
