@@ -545,6 +545,8 @@ export class StoreService extends StoreBase implements RWStorageService {
       "verifiedAt",
       "licenseType",
       "contractLabel",
+      "similarMatchChainId",
+      "similarMatchAddress"
     ];
     defaultFields.forEach((field) => requestedFields.add(field));
 

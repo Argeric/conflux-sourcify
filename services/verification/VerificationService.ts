@@ -269,6 +269,7 @@ export class VerificationService {
     verificationEndpoint: string,
     chainId: number,
     address: string,
+    linkChainIds?: number[],
   ): Promise<VerificationJobId> {
     const verificationId = await this.store.storeVerificationJob(
       new Date(),
@@ -281,7 +282,16 @@ export class VerificationService {
       const chain = this.chains[chainId];
       const bytecode = await chain.getBytecode(address);
       const codeHash = keccak256(bytecode);
-      await this.store.insertNewSimilarContract(chainId, address, codeHash);
+      await this.store.insertNewSimilarContract(
+        chainId,
+        address,
+        codeHash,
+        linkChainIds,
+        {
+          verificationId,
+          finishTime: new Date(),
+        }
+      );
     } catch (error) {
       let errorExport: VerifyErrorExport;
       if (`${error}`.includes("Failed to find contract-deployment.")) {
