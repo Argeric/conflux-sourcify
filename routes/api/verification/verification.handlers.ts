@@ -11,6 +11,7 @@ import { StatusCodes } from "http-status-codes";
 import { fetchFromConfluxscan } from "../../../services/utils/confluxscan-util";
 import { getChainId } from "../errors";
 import { ChainMap } from "../../../server";
+import _ from "lodash";
 
 interface VerifyFromJsonInputRequest extends Request {
   params: {
@@ -64,7 +65,7 @@ export async function verifyFromJsonInputEndpoint(
       chain,
       req.params.address,
       req.body.stdJsonInput,
-      req.body.compilerVersion,
+      _.trimStart(req.body.compilerVersion, "v"),
       compilationTarget,
       req.body.creationTransactionHash,
       req.body.licenseType,

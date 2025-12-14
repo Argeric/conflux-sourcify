@@ -4,7 +4,7 @@ import {
   CompilationTarget,
   Metadata,
 } from "@ethereum-sourcify/lib-sourcify";
-import { ConflictError } from "../../common/errors";
+import { ConflictError, NotFoundError } from "../../common/errors";
 import { asyncLocalStorage } from "../../common/async-context";
 import { VerificationJobId } from "../../routes/types";
 import Piscina from "piscina";
@@ -278,35 +278,42 @@ export class VerificationService {
       verificationEndpoint,
     );
 
-    try {
-      const chain = this.chains[chainId];
-      const bytecode = await chain.getBytecode(address);
-      const codeHash = keccak256(bytecode);
-      await this.store.insertNewSimilarContract(
-        chainId,
-        address,
-        codeHash,
-        linkChainIds,
-        {
-          verificationId,
-          finishTime: new Date(),
-        }
-      );
-    } catch (error) {
-      let errorExport: VerifyErrorExport;
-      if (`${error}`.includes("Failed to find contract-deployment.")) {
-        errorExport = {
-          customCode: "no_similar_match_found",
-          errorId: uuidv4(),
-        };
-      } else {
-        errorExport = {
-          customCode: "internal_error",
-          errorId: uuidv4(),
-        };
-      }
-      await this.store.setJobError(verificationId, new Date(), errorExport);
+    const chain = this.chains[chainId];
+    const bytecode = await chain.getBytecode(address);
+
+    if (bytecode === "0x") {
+      await this.store.setJobError(verificationId, new Date(), {
+        customCode: "contract_not_deployed",
+        errorId: uuidv4()
+      });
+      return verificationId;
     }
+
+    await this.store.insertNewSimilarContract(
+      chainId,
+      address,
+      keccak256(bytecode),
+      linkChainIds,
+      {
+        verificationId,
+        finishTime: new Date()
+      }
+    ).catch((error) => {
+        let errorExport: VerifyErrorExport;
+        if (error instanceof NotFoundError) {
+          errorExport = {
+            customCode: "no_similar_match_found",
+            errorId: uuidv4()
+          };
+        } else {
+          errorExport = {
+            customCode: "internal_error",
+            errorId: uuidv4()
+          };
+        }
+        return this.store.setJobError(verificationId, new Date(), errorExport);
+      }
+    );
 
     return verificationId;
   }

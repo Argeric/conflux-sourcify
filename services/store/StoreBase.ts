@@ -21,6 +21,7 @@ import {
 } from "../../routes/types";
 import { VerifyErrorExport } from "../workers/workerTypes";
 import { DatabaseOptions } from "../../config/Loader";
+import { NotFoundError } from "../../common/errors";
 
 export default class StoreBase {
   public database: Dao;
@@ -298,7 +299,7 @@ export default class StoreBase {
     const contractDeployment =
       await this.database.getContractDeploymentByRuntimeCodeHash(codeHash, linkChainIds);
     if (!contractDeployment) {
-      throw new Error("Failed to find contract-deployment.");
+      throw new NotFoundError("Failed to find contract-deployment.");
     }
 
     const verifiedContract =
@@ -306,7 +307,7 @@ export default class StoreBase {
         contractDeployment.id,
       );
     if (!verifiedContract) {
-      throw new Error("Failed to find verified-contract.");
+      throw new NotFoundError("Failed to find verified-contract.");
     }
 
     const sourcifyMatch =
@@ -314,7 +315,7 @@ export default class StoreBase {
         verifiedContract.id,
       );
     if (!sourcifyMatch) {
-      throw new Error("Failed to find sourcify-match.");
+      throw new NotFoundError("Failed to find sourcify-match.");
     }
 
     const { sequelize } = Tables.VerifiedContract;
