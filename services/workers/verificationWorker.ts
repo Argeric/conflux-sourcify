@@ -33,6 +33,7 @@ import { Chain } from "../chain/Chain";
 import { ChainInstance } from "../../config/Loader";
 import { ChainMap } from "../../server";
 import { ExtendedVerification } from "./ExtendedVerification";
+import { ExtendedSolidityCompilation } from "./ExtendedSolidityCompilation";
 
 export const filename = resolve(__filename);
 
@@ -101,10 +102,10 @@ async function _verifyFromJsonInput({
   compilationTarget,
   creationTransactionHash,
 }: VerifyFromJsonInput): Promise<VerifyOutput> {
-  let compilation: SolidityCompilation | VyperCompilation | undefined;
+  let compilation: ExtendedSolidityCompilation | VyperCompilation | undefined;
   try {
     if (jsonInput.language === "Solidity") {
-      compilation = new SolidityCompilation(
+      compilation = new ExtendedSolidityCompilation(
         solc,
         compilerVersion,
         jsonInput as SolidityJsonInput,
