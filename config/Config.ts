@@ -62,7 +62,7 @@ export default {
       supported: true,
       corespace: true,
       confluxscanApi: {
-        apiURL: "https://api-stage.confluxscan.org",
+        apiURL: "https://api.confluxscan.org",
       },
       rpc: [
         "http://main.confluxrpc.com",
@@ -79,7 +79,7 @@ export default {
       name: "Conflux eSpace mainnet",
       supported: true,
       confluxscanApi: {
-        apiURL: "https://evmapi-stage.confluxscan.org",
+        apiURL: "https://evmapi.confluxscan.org",
       },
       rpc: ["http://evm.confluxrpc.com"],
       traceSupportedRPCs: [
