@@ -323,10 +323,14 @@ export const processSolidityResultFromConfluxscan = (
     solcJsonInput = parseConfluxscanJsonInput(sourceCodeObject);
     if (solcJsonInput?.settings) {
       // Tell compiler to output metadata and bytecode
-      solcJsonInput.settings.outputSelection["*"]["*"] = [
-        "metadata",
-        "evm.deployedBytecode.object",
-      ];
+      solcJsonInput.settings["outputSelection"] = {
+        "*": {
+          "*": [
+            "metadata",
+            "evm.deployedBytecode.object"
+          ]
+        }
+      };
     }
     contractPath = getContractPathFromSourcesOrThrow(
       contractName,

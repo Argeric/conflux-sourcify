@@ -218,6 +218,8 @@ export type VerificationErrorCode =
   | "unsupported_language"
   | "already_verified"
   | "no_similar_match_found"
+  | "constructor_args_not_abi_encoded"
+  | "constructor_args_not_match"
   | "internal_error";
 
 export type VerificationErrorParameters =
@@ -236,6 +238,10 @@ export function getVerificationErrorMessage(
       return "The contract is already verified and the job didn't yield a better match.";
     case "no_similar_match_found":
       return "Unable to verify source code by similar match.";
+    case "constructor_args_not_abi_encoded":
+      return "Invalid constructor arguments provided. Please verify that they are in ABI-encoded format.";
+    case "constructor_args_not_match":
+      return "Invalid constructor arguments provided. It doesn't match the constructor arguments of the contract.";
     case "internal_error":
       return "The server encountered an unexpected error.";
     default:

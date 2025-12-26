@@ -30,6 +30,7 @@ import {
   getSolcJs,
 } from "@ethereum-sourcify/compilers";
 import { keccak256 } from "ethers";
+import { matchBytesIgnoreCase, validABIEncoded } from "../utils/util";
 
 export interface VerificationOptions {
   chains: ChainMap;
@@ -150,6 +151,7 @@ export class VerificationService {
     jsonInput: SolidityJsonInput,
     compilerVersion: string,
     compilationTarget: CompilationTarget,
+    constructorArguments?: string,
     creationTransactionHash?: string,
     licenseType?: number,
     contractLabel?: string,
@@ -179,6 +181,7 @@ export class VerificationService {
           output,
           licenseType,
           contractLabel,
+          constructorArguments,
         );
       })
       .finally(() => {
@@ -323,10 +326,34 @@ export class VerificationService {
     output: VerifyOutput,
     licenseType?: number,
     contractLabel?: string,
+    constructorArguments?: string,
   ): Promise<void> {
     return Promise.resolve(output)
       .then((output: VerifyOutput) => {
         if (output.verificationExport) {
+          if (constructorArguments) {
+            if (!validABIEncoded(constructorArguments)) {
+              throw new VerifyError({
+                customCode: "constructor_args_not_abi_encoded",
+                errorId: uuidv4()
+              });
+            }
+
+            const expectValue = output.verificationExport.transformations?.creation.values.constructorArguments || "";
+            console.log("Check constructor arguments", {
+              address: output.verificationExport.address,
+              chainId: output.verificationExport.chainId,
+              constructorArguments,
+              expectValue
+            });
+
+            if (!matchBytesIgnoreCase(constructorArguments, expectValue)) {
+              throw new VerifyError({
+                customCode: "constructor_args_not_match",
+                errorId: uuidv4()
+              });
+            }
+          }
           return output.verificationExport;
         } else if (output.errorExport) {
           throw new VerifyError(output.errorExport);

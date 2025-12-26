@@ -22,6 +22,7 @@ interface VerifyFromJsonInputRequest extends Request {
     stdJsonInput: SolidityJsonInput | VyperJsonInput;
     compilerVersion: string;
     contractIdentifier: string;
+    constructorArguments?: string;
     creationTransactionHash?: string;
     licenseType?: number;
     contractLabel?: string;
@@ -42,6 +43,7 @@ export async function verifyFromJsonInputEndpoint(
     stdJsonInput: req.body.stdJsonInput,
     compilerVersion: req.body.compilerVersion,
     contractIdentifier: req.body.contractIdentifier,
+    constructorArguments: req.body.constructorArguments,
     creationTransactionHash: req.body.creationTransactionHash,
     licenseType: req.body.licenseType,
     contractLabel: req.body.contractLabel,
@@ -67,6 +69,7 @@ export async function verifyFromJsonInputEndpoint(
       req.body.stdJsonInput,
       _.trimStart(req.body.compilerVersion, "v"),
       compilationTarget,
+      req.body.constructorArguments,
       req.body.creationTransactionHash,
       req.body.licenseType,
       req.body.contractLabel,
