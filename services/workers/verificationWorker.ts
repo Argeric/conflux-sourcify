@@ -2,12 +2,7 @@ import Piscina from "piscina";
 import {
   SolidityJsonInput,
   VyperJsonInput,
-  SolidityCompilation,
-  VyperCompilation,
-  Verification,
   SourcifyLibError,
-  SolidityMetadataContract,
-  useAllSourcesAndReturnCompilation,
 } from "@ethereum-sourcify/lib-sourcify";
 import { resolve } from "path";
 import { SolcLocal } from "../compiler/SolcLocal";
@@ -32,8 +27,11 @@ import { asyncLocalStorage } from "../../common/async-context";
 import { Chain } from "../chain/Chain";
 import { ChainInstance } from "../../config/Loader";
 import { ChainMap } from "../../server";
-import { ExtendedVerification } from "./ExtendedVerification";
-import { ExtendedSolidityCompilation } from "./ExtendedSolidityCompilation";
+import { Verification } from "./Verification";
+import { SolidityCompilation } from "../compilation/SolidityCompilation";
+import { VyperCompilation } from "../compilation/VyperCompilation";
+import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
+import { useAllSourcesAndReturnCompilation } from "../validation/processFiles";
 
 export const filename = resolve(__filename);
 
@@ -102,10 +100,10 @@ async function _verifyFromJsonInput({
   compilationTarget,
   creationTransactionHash,
 }: VerifyFromJsonInput): Promise<VerifyOutput> {
-  let compilation: ExtendedSolidityCompilation | VyperCompilation | undefined;
+  let compilation: SolidityCompilation | VyperCompilation | undefined;
   try {
     if (jsonInput.language === "Solidity") {
-      compilation = new ExtendedSolidityCompilation(
+      compilation = new SolidityCompilation(
         solc,
         compilerVersion,
         jsonInput as SolidityJsonInput,
@@ -118,8 +116,6 @@ async function _verifyFromJsonInput({
         jsonInput as VyperJsonInput,
         compilationTarget,
       );
-    } else {
-      throw new Error(`No compiler for ${jsonInput.language} found`);
     }
   } catch (error: any) {
     return {
@@ -142,7 +138,7 @@ async function _verifyFromJsonInput({
     (await getCreatorTx(chain, address)) ||
     undefined;
 
-  const verification = new ExtendedVerification(
+  const verification = new Verification(
     compilation,
     chain,
     address,
@@ -150,7 +146,11 @@ async function _verifyFromJsonInput({
   );
 
   try {
-    await verification.verify();
+    if (compilationTarget.name) {
+      await verification.verify();
+    } else {
+      await verification.verifyWithBestEfforts();
+    }
   } catch (error: any) {
     return {
       errorExport: createErrorExport(error, verification),
@@ -268,7 +268,7 @@ async function _verifyFromConfluxscan({
 
 function createErrorExport(
   error: Error,
-  verification?: Verification | ExtendedVerification,
+  verification?: Verification,
 ): VerifyErrorExport {
   if (!(error instanceof SourcifyLibError)) {
     // If the error is not a SourcifyLibError, the server reached an unexpected state.

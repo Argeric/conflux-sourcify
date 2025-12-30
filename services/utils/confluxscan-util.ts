@@ -78,6 +78,7 @@ export type ConfluxscanResult = {
   SourceCode: string;
   ABI: string;
   ContractName: string;
+  ContractFileName: string;
   CompilerVersion: string;
   OptimizationUsed: string;
   Runs: string;
@@ -309,6 +310,7 @@ export const processSolidityResultFromConfluxscan = (
 ): ProcessedConfluxscanResult => {
   const sourceCodeObject = contractResultJson.SourceCode;
   const contractName = contractResultJson.ContractName;
+  const contractFileName = contractResultJson.ContractFileName;
 
   const compilerVersion =
     contractResultJson.CompilerVersion.charAt(0) === "v"
@@ -325,17 +327,13 @@ export const processSolidityResultFromConfluxscan = (
       // Tell compiler to output metadata and bytecode
       solcJsonInput.settings["outputSelection"] = {
         "*": {
-          "*": [
-            "metadata",
-            "evm.deployedBytecode.object"
-          ]
-        }
+          "*": ["metadata", "evm.deployedBytecode.object"],
+        },
       };
     }
-    contractPath = getContractPathFromSourcesOrThrow(
-      contractName,
-      solcJsonInput.sources,
-    );
+    contractPath =
+      contractFileName ||
+      getContractPathFromSourcesOrThrow(contractName, solcJsonInput.sources);
   } else if (isConfluxscanMultipleFilesObject(sourceCodeObject)) {
     console.debug("Confluxscan Solidity multiple file contract found");
     const sources = JSON.parse(sourceCodeObject) as Sources;

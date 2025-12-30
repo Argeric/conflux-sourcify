@@ -5,3 +5,7 @@ curl -X 'GET' \
 curl -X 'GET' \
   'http://127.0.0.1:17651/contract/1030/0x76240902Bc1B02f21378F6C7F09369624005B7EF?fields=abi,metadata,creationBytecode.onchainBytecode,deployment.blockNumber,compilation' \
   -H 'accept: application/json'
+
+curl -X 'GET' \
+  'http://127.0.0.1:17651/contract/1030/0x8E52aA02245134Becdf3E0405a40ae04e151eD5C?fields=abi,metadata,creationBytecode.onchainBytecode,deployment.blockNumber,compilation' \
+  -H 'accept: application/json'

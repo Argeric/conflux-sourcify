@@ -287,36 +287,37 @@ export class VerificationService {
     if (bytecode === "0x") {
       await this.store.setJobError(verificationId, new Date(), {
         customCode: "contract_not_deployed",
-        errorId: uuidv4()
+        errorId: uuidv4(),
       });
       return verificationId;
     }
 
-    await this.store.insertNewSimilarContract(
-      chainId,
-      address,
-      keccak256(bytecode),
-      linkChainIds,
-      {
-        verificationId,
-        finishTime: new Date()
-      }
-    ).catch((error) => {
+    await this.store
+      .insertNewSimilarContract(
+        chainId,
+        address,
+        keccak256(bytecode),
+        linkChainIds,
+        {
+          verificationId,
+          finishTime: new Date(),
+        },
+      )
+      .catch((error) => {
         let errorExport: VerifyErrorExport;
         if (error instanceof NotFoundError) {
           errorExport = {
             customCode: "no_similar_match_found",
-            errorId: uuidv4()
+            errorId: uuidv4(),
           };
         } else {
           errorExport = {
             customCode: "internal_error",
-            errorId: uuidv4()
+            errorId: uuidv4(),
           };
         }
         return this.store.setJobError(verificationId, new Date(), errorExport);
-      }
-    );
+      });
 
     return verificationId;
   }
@@ -335,22 +336,24 @@ export class VerificationService {
             if (!validABIEncoded(constructorArguments)) {
               throw new VerifyError({
                 customCode: "constructor_args_not_abi_encoded",
-                errorId: uuidv4()
+                errorId: uuidv4(),
               });
             }
 
-            const expectValue = output.verificationExport.transformations?.creation.values.constructorArguments || "";
+            const expectValue =
+              output.verificationExport.transformations?.creation.values
+                .constructorArguments || "";
             console.log("Check constructor arguments", {
               address: output.verificationExport.address,
               chainId: output.verificationExport.chainId,
               constructorArguments,
-              expectValue
+              expectValue,
             });
 
             if (!matchBytesIgnoreCase(constructorArguments, expectValue)) {
               throw new VerifyError({
                 customCode: "constructor_args_not_match",
-                errorId: uuidv4()
+                errorId: uuidv4(),
               });
             }
           }

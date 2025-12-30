@@ -8,8 +8,8 @@
   "scripts": {
     "build": "npx tsc -b .",
     "start": "node ./server.js",
-    "test": "npx c8 --reporter=none mocha --exit --recursive test/unit/** test/integration/**",
-    "test:unit": "mocha --exit --recursive test/unit/**",
+    "test": "npx c8 --reporter=none mocha --exit --recursive test/unit/**/*.ts test/integration/**/*.ts",
+    "test:unit": "mocha --exit --recursive test/unit/**/*.ts",
     "fix": "run-s fix:*",
     "fix:prettier": "prettier \"./**/*.ts\" --write",
     "fix:lint": "eslint . --ext .ts --fix",

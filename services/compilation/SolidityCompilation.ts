@@ -1,20 +1,29 @@
-import { ExtendedAbsCompilation } from "./ExtendedAbsCompilation";
+import { AuxdataStyle, splitAuxdata } from "@ethereum-sourcify/bytecode-utils";
+import { AbstractCompilation } from "./AbstractCompilation";
 import {
-  CompilationError,
-  CompilationLanguage, CompilationTarget, ImmutableReferences, ISolidityCompiler, LinkReferences,
+  ImmutableReferences,
   SolidityJsonInput,
   SolidityOutput,
-  SolidityOutputContract
+  SolidityOutputContract,
+  LinkReferences,
+} from "@ethereum-sourcify/compilers-types";
+import {
+  CompilationError,
+  CompilationLanguage,
+  CompilationTarget,
+  ISolidityCompiler,
 } from "@ethereum-sourcify/lib-sourcify";
-import { AuxdataStyle, splitAuxdata } from "@ethereum-sourcify/bytecode-utils";
 import {
   findAuxdataPositions,
-  findAuxdatasInLegacyAssembly
+  findAuxdatasInLegacyAssembly,
 } from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/auxdataUtils";
 import { logWarn } from "@ethereum-sourcify/compilers/build/main/logger";
 
-export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
-  public language: CompilationLanguage = 'Solidity';
+/**
+ * Abstraction of a solidity compilation
+ */
+export class SolidityCompilation extends AbstractCompilation {
+  public language: CompilationLanguage = "Solidity";
   // Use declare to override AbstractCompilation's types to target Solidity types
   declare jsonInput: SolidityJsonInput;
   declare compilerOutput?: SolidityOutput;
@@ -37,22 +46,22 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
 
   initSolidityJsonInput() {
     this.jsonInput.settings.outputSelection = {
-      '*': {
-        '*': [
-          'abi',
-          'devdoc',
-          'userdoc',
-          'storageLayout',
-          'evm.legacyAssembly',
-          'evm.bytecode.object',
-          'evm.bytecode.sourceMap',
-          'evm.bytecode.linkReferences',
-          'evm.bytecode.generatedSources',
-          'evm.deployedBytecode.object',
-          'evm.deployedBytecode.sourceMap',
-          'evm.deployedBytecode.linkReferences',
-          'evm.deployedBytecode.immutableReferences',
-          'metadata',
+      "*": {
+        "*": [
+          "abi",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.legacyAssembly",
+          "evm.bytecode.object",
+          "evm.bytecode.sourceMap",
+          "evm.bytecode.linkReferences",
+          "evm.bytecode.generatedSources",
+          "evm.deployedBytecode.object",
+          "evm.deployedBytecode.sourceMap",
+          "evm.deployedBytecode.linkReferences",
+          "evm.deployedBytecode.immutableReferences",
+          "metadata",
         ],
       },
     };
@@ -72,7 +81,7 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
       forceEmscripten: boolean;
     } = JSON.parse(JSON.stringify(compilerSettings));
     Object.values(newCompilerSettings.solcJsonInput.sources).forEach(
-      (source) => (source.content += ' '),
+      (source) => (source.content += " "),
     );
     return await this.compiler.compile(
       newCompilerSettings.version,
@@ -109,14 +118,14 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
         );
 
         if (!runtimeAuxdataCbor) {
-          throw new Error('runtimeAuxdataCbor is undefined');
+          throw new Error("runtimeAuxdataCbor is undefined");
         }
 
         const auxdataFromRawRuntimeBytecode = `${runtimeAuxdataCbor}${runtimeCborLengthHex}`;
 
         // we divide by 2 because we store the length in bytes (without 0x)
         this._runtimeBytecodeCborAuxdata = {
-          '1': {
+          "1": {
             offset:
               this.runtimeBytecode.substring(2).length / 2 -
               parseInt(runtimeCborLengthHex, 16) -
@@ -136,7 +145,7 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
           const auxdataFromRawCreationBytecode = `${creationAuxdataCbor}${creationCborLengthHex}`;
           // we divide by 2 because we store the length in bytes (without 0x)
           this._creationBytecodeCborAuxdata = {
-            '1': {
+            "1": {
               offset:
                 this.creationBytecode.substring(2).length / 2 -
                 parseInt(creationCborLengthHex, 16) -
@@ -158,7 +167,7 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
       const editedContract =
         editedContractCompilerOutput.contracts[this.compilationTarget.path][
           this.compilationTarget.name
-          ];
+        ];
 
       const editedContractAuxdatasFromCompilerOutput =
         findAuxdatasInLegacyAssembly(editedContract.evm.legacyAssembly);
@@ -181,11 +190,11 @@ export class ExtendedSolidityCompilation extends ExtendedAbsCompilation {
         editedContractAuxdatasFromCompilerOutput,
       );
     } catch (error) {
-      logWarn('Cannot generate cbor auxdata positions', {
+      logWarn("Cannot generate cbor auxdata positions", {
         error,
       });
       throw new CompilationError({
-        code: 'cannot_generate_cbor_auxdata_positions',
+        code: "cannot_generate_cbor_auxdata_positions",
       });
     }
   }
