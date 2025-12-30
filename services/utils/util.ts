@@ -213,9 +213,13 @@ export function trimPrefix0x(data: string) {
 
 export function validABIEncoded(data: string) {
   const bytes = trimPrefix0x(data);
-  return bytes ? (!!bytes.match(/^[0-9a-fA-F]*$/)) && (bytes.length % 64 === 0) : true;
+  return bytes
+    ? !!bytes.match(/^[0-9a-fA-F]*$/) && bytes.length % 64 === 0
+    : true;
 }
 
 export function matchBytesIgnoreCase(data1: string, data2: string) {
-  return trimPrefix0x(data1).toLowerCase() === trimPrefix0x(data2).toLowerCase();
+  return (
+    trimPrefix0x(data1).toLowerCase() === trimPrefix0x(data2).toLowerCase()
+  );
 }

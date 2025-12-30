@@ -861,12 +861,15 @@ export class Dao {
         AND chain_id = ?
         AND address = ?
         AND contract_id = ?
-        ${transaction_hash ? 'AND transaction_hash = ?' : ''}
+        ${transaction_hash ? "AND transaction_hash = ?" : ""}
       `,
       {
         type: QueryTypes.SELECT,
         transaction: dbTx,
-        replacements: [...[chain_id, address, contract_id], ...(transaction_hash ? [transaction_hash] : [])],
+        replacements: [
+          ...[chain_id, address, contract_id],
+          ...(transaction_hash ? [transaction_hash] : []),
+        ],
       },
     );
 
@@ -930,7 +933,7 @@ export class Dao {
         JOIN contracts c ON d.contract_id = c.id
         WHERE
           c.runtime_code_hash = ?
-          ${linkChainIds?.length ? `AND d.chain_id in (${linkChainIds.join(",")})` : ''}
+          ${linkChainIds?.length ? `AND d.chain_id in (${linkChainIds.join(",")})` : ""}
         ORDER BY d.id asc limit 1
       `,
       {
@@ -1083,24 +1086,27 @@ export class Dao {
     return { id } as any;
   }
 
-  async updateVerificationJob({
-    id,
-    completed_at,
-    verified_contract_id,
-    compilation_time,
-    error_code,
-    error_id,
-    error_data,
-  }: Pick<
-    Tables.IVerificationJob,
-    | "id"
-    | "completed_at"
-    | "verified_contract_id"
-    | "compilation_time"
-    | "error_code"
-    | "error_id"
-    | "error_data"
-  >, dbTx?: Transaction): Promise<void> {
+  async updateVerificationJob(
+    {
+      id,
+      completed_at,
+      verified_contract_id,
+      compilation_time,
+      error_code,
+      error_id,
+      error_data,
+    }: Pick<
+      Tables.IVerificationJob,
+      | "id"
+      | "completed_at"
+      | "verified_contract_id"
+      | "compilation_time"
+      | "error_code"
+      | "error_id"
+      | "error_data"
+    >,
+    dbTx?: Transaction,
+  ): Promise<void> {
     const errorDataStr = JSON.stringify(error_data);
     await this.pool.query(
       `

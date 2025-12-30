@@ -297,7 +297,10 @@ export default class StoreBase {
     },
   ) {
     const contractDeployment =
-      await this.database.getContractDeploymentByRuntimeCodeHash(codeHash, linkChainIds);
+      await this.database.getContractDeploymentByRuntimeCodeHash(
+        codeHash,
+        linkChainIds,
+      );
     if (!contractDeployment) {
       throw new NotFoundError("Failed to find contract-deployment.");
     }
@@ -348,23 +351,27 @@ export default class StoreBase {
           similar_match_chain_id: contractDeployment.chain_id,
           similar_match_address: contractDeployment.address,
         };
-        const oldMatch = await this.database.getSourcifyMatchByVerifiedContractId(verified.id);
-        if(oldMatch) {
+        const oldMatch =
+          await this.database.getSourcifyMatchByVerifiedContractId(verified.id);
+        if (oldMatch) {
           await this.database.updateSourcifyMatch(newMatch, verified.id, dbTx);
         } else {
           await this.database.insertSourcifyMatch(newMatch, dbTx);
         }
 
-        if(jobData) {
-          await this.database.updateVerificationJob({
-            id: jobData.verificationId,
-            completed_at: jobData.finishTime,
-            verified_contract_id: verified.id,
-            compilation_time: null,
-            error_code: null,
-            error_id: null,
-            error_data: null,
-          }, dbTx);
+        if (jobData) {
+          await this.database.updateVerificationJob(
+            {
+              id: jobData.verificationId,
+              completed_at: jobData.finishTime,
+              verified_contract_id: verified.id,
+              compilation_time: null,
+              error_code: null,
+              error_id: null,
+              error_data: null,
+            },
+            dbTx,
+          );
         }
       });
     } catch (e) {

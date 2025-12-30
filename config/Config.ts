@@ -115,14 +115,12 @@ export default {
         apiURL: "https://api-holesky.etherscan.io",
         apiKeyEnvName: "ETHERSCAN_API_KEY",
       },
-      rpc: [
-        'https://ethereum-holesky-rpc.publicnode.com'
-      ],
+      rpc: ["https://ethereum-holesky-rpc.publicnode.com"],
       traceSupportedRPCs: [
         {
-          type: 'trace_transaction',
+          type: "trace_transaction",
           index: 0,
-        }
+        },
       ],
     },
     31337: {

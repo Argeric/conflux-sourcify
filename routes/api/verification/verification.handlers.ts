@@ -180,7 +180,10 @@ export async function verifyFromCrossChainEndpoint(
 
   const services = req.app.get("services") as Services;
   const chain = getChainId(req.params.chainId);
-  const linkChainIds = req.body?.linkChainIds?.split(",").map(Number).filter(Boolean);
+  const linkChainIds = req.body?.linkChainIds
+    ?.split(",")
+    .map(Number)
+    .filter(Boolean);
 
   const verificationId =
     await services.verification.verifyFromCrossChainViaWorker(

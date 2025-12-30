@@ -7,6 +7,14 @@ curl -X 'POST' \
 }'
 
 curl -X 'POST' \
+  'http://127.0.0.1:17651/verify/confluxscan/1030/0x8E52aA02245134Becdf3E0405a40ae04e151eD5C' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "apiKey": "xxx"
+}'
+
+curl -X 'POST' \
   'http://127.0.0.1:17651/verify/confluxscan/71/0x292Ff9c3C27e2dAc1b5862c43E10B701969f807A' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \

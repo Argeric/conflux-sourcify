@@ -91,7 +91,7 @@ export interface DatabaseOptions extends Options {
 }
 
 export function loadConfig(): Config {
-  const config = (defaultConfig as any) as Config;
+  const config = defaultConfig as any as Config;
 
   for (const [chainId, chain] of Object.entries(config.chains)) {
     if (!chain.chainId) {
