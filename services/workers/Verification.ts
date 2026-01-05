@@ -1,49 +1,46 @@
-import { AbstractCompilation } from "@ethereum-sourcify/lib-sourcify";
-import { SourcifyChain } from "@ethereum-sourcify/lib-sourcify";
 import { lt } from "semver";
 import {
-  splitAuxdata,
   AuxdataStyle,
   decode as decodeBytecode,
   SolidityDecodedObject,
+  splitAuxdata,
 } from "@ethereum-sourcify/bytecode-utils";
-import { SolidityCompilation } from "@ethereum-sourcify/lib-sourcify";
-import { VyperCompilation } from "@ethereum-sourcify/lib-sourcify";
 import {
+  BytecodeMatchingResult,
   CompiledContractCborAuxdata,
-  StringMap,
-} from "@ethereum-sourcify/lib-sourcify";
-
-import {
   extractAuxdataTransformation,
   extractCallProtectionTransformation,
   extractConstructorArgumentsTransformation,
   extractImmutablesTransformation,
   extractLibrariesTransformation,
+  StringMap,
+  SolidityBugType,
+  SourcifyChain,
+  SourcifyLibError,
   Transformation,
   TransformationValues,
-} from "@ethereum-sourcify/lib-sourcify";
-import {
-  BytecodeMatchingResult,
-  SolidityBugType,
   VerificationError,
   VerificationExport,
   VerificationStatus,
 } from "@ethereum-sourcify/lib-sourcify";
+import { CompilationTarget } from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/CompilationTypes";
 import {
-  VyperOutputContract,
   ImmutableReferences,
+  Metadata,
   SolidityOutputContract,
   SoliditySettings,
-  Metadata,
+  VyperOutputContract,
 } from "@ethereum-sourcify/compilers-types";
-import { SolidityMetadataContract } from "@ethereum-sourcify/lib-sourcify";
+import { AbstractCompilation } from "../compilation/AbstractCompilation";
+import { SolidityCompilation } from "../compilation/SolidityCompilation";
+import { VyperCompilation } from "../compilation/VyperCompilation";
 import {
   blueprintDeployerBytecode,
   parseBlueprintPreamble,
 } from "../utils/erc5202-util";
+import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
 
-export class ExtendedVerification {
+export class Verification {
   // Bytecodes
   private _onchainRuntimeBytecode?: string;
   private _onchainCreationBytecode?: string;
@@ -70,23 +67,59 @@ export class ExtendedVerification {
     private creatorTxHash?: string,
   ) {}
 
+  async verifyWithBestEfforts() {
+    const fullQualifyNames =
+      await this.compilation.compileAndReturnContractFullQualifyNames();
+
+    let compilationTarget: CompilationTarget | undefined;
+    for (const fqn of fullQualifyNames) {
+      this.compilation.compilationTarget = fqn;
+
+      try {
+        await this.verify();
+        if (compilationTarget) {
+          throw new SourcifyLibError({
+            code: "invalid_compilation_target",
+            compilationTargets: [] as string[],
+          });
+        }
+        compilationTarget = fqn;
+      } catch (e: any) {
+        if (e.code === "no_match") {
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    if (compilationTarget) {
+      this.compilation.compilationTarget = compilationTarget;
+      await this.verify();
+    } else {
+      throw new VerificationError({ code: "no_match" });
+    }
+  }
+
   async verify({
     forceEmscripten = false,
   }: { forceEmscripten?: boolean } = {}): Promise<void> {
     console.info("Verifying contract", {
       address: this.address,
-      chainId: this.sourcifyChain.chainId,
+      chainId: this.chainId,
     });
 
     try {
-      this._onchainRuntimeBytecode = await this.sourcifyChain.getBytecode(
-        this.address,
-      );
+      // fetch once
+      if (!this._onchainRuntimeBytecode) {
+        this._onchainRuntimeBytecode = await this.sourcifyChain.getBytecode(
+          this.address,
+        );
+      }
     } catch (e: any) {
       throw new VerificationError({
         code: "cannot_fetch_bytecode",
         address: this.address,
-        chainId: this.sourcifyChain.chainId.toString(),
+        chainId: this.chainId.toString(),
       });
     }
 
@@ -94,7 +127,7 @@ export class ExtendedVerification {
       throw new VerificationError({
         code: "contract_not_deployed",
         address: this.address,
-        chainId: this.sourcifyChain.chainId.toString(),
+        chainId: this.chainId.toString(),
       });
     }
 
@@ -152,13 +185,13 @@ export class ExtendedVerification {
     // Try to match onchain runtime bytecode with compiled runtime bytecode
     try {
       console.debug("Matching with runtime bytecode", {
-        chain: this.sourcifyChain.chainId,
+        chain: this.chainId,
         address: this.address,
       });
       await this.matchWithRuntimeBytecode();
     } catch (e: any) {
       console.warn("Error matching with runtime bytecode", {
-        chain: this.sourcifyChain.chainId,
+        chain: this.chainId,
         address: this.address,
         error: e.message,
       });
@@ -188,29 +221,32 @@ export class ExtendedVerification {
     if (this.creatorTxHash) {
       try {
         console.debug("Matching with creation tx", {
-          chain: this.sourcifyChain.chainId,
+          chain: this.chainId,
           address: this.address,
           creatorTxHash: this.creatorTxHash,
         });
 
-        // Get creation transaction data
-        const creatorTx = await this.sourcifyChain.getTx(this.creatorTxHash);
-        this.blockNumber = creatorTx.blockNumber || undefined;
-        this.deployer = creatorTx.from;
+        // fetch once
+        if (!this._onchainCreationBytecode) {
+          // Get creation transaction data
+          const creatorTx = await this.sourcifyChain.getTx(this.creatorTxHash);
+          this.blockNumber = creatorTx.blockNumber || undefined;
+          this.deployer = creatorTx.from;
 
-        const { creationBytecode, txReceipt } =
-          await this.sourcifyChain.getContractCreationBytecodeAndReceipt(
-            this.address,
-            this.creatorTxHash,
-            creatorTx,
-          );
-        this._onchainCreationBytecode = creationBytecode;
-        this.txIndex = txReceipt.index;
+          const { creationBytecode, txReceipt } =
+            await this.sourcifyChain.getContractCreationBytecodeAndReceipt(
+              this.address,
+              this.creatorTxHash,
+              creatorTx,
+            );
+          this._onchainCreationBytecode = creationBytecode;
+          this.txIndex = txReceipt.index;
+        }
 
         await this.matchWithCreationTx();
       } catch (e: any) {
         console.warn("Error matching with creation tx", {
-          chain: this.sourcifyChain.chainId,
+          chain: this.chainId,
           address: this.address,
           creatorTxHash: this.creatorTxHash,
           error: e.message,
@@ -222,7 +258,7 @@ export class ExtendedVerification {
     if (this.creationMatch !== null || this.runtimeMatch !== null) {
       console.info("Verified contract", {
         address: this.address,
-        chainId: this.sourcifyChain.chainId,
+        chainId: this.chainId,
         runtimeMatch: this.runtimeMatch,
         creationMatch: this.creationMatch,
       });
@@ -313,7 +349,7 @@ export class ExtendedVerification {
     ) {
       console.info("Force Emscripten compiler", {
         address: this.address,
-        chainId: this.sourcifyChain.chainId,
+        chainId: this.chainId,
       });
 
       // Try to verify again with Emscripten
@@ -438,7 +474,7 @@ export class ExtendedVerification {
         doBlueprintBytecodesMatch = parsedInitCode.equals(initCode);
       } catch (e) {
         if (e instanceof Error) {
-          console.log(`Check blueprint deployment`, e.message);
+          console.log(`Check blueprint deployment.`, e.message);
         } else {
           throw e;
         }
@@ -525,6 +561,8 @@ export class ExtendedVerification {
       };
       this.creationMatch = matchBytecodesResult.match;
       this.creationLibraryMap = matchBytecodesResult.libraryMap;
+    } else {
+      this.creationMatch = matchBytecodesResult.match;
     }
   }
 
