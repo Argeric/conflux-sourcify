@@ -12,6 +12,7 @@ import {
 } from "../../routes/api/errors";
 import SolidityParser from "@solidity-parser/parser";
 import { Chain } from "../chain/Chain";
+import axios, { HttpStatusCode } from "axios";
 
 interface VyperVersion {
   compiler_version: string;
@@ -237,7 +238,16 @@ export const fetchFromConfluxscan = async (
   });
   let response;
   try {
-    response = await fetch(`${url}&apikey=${usedApiKey || ""}`);
+    response = await axios({
+      method: "GET",
+      url: `${url}&apikey=${usedApiKey || ""}`,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      timeout: 30000,
+      family: 4
+    });
   } catch (e) {
     throw new ConfluxscanRequestFailedError(
       `Request to ${url}&apiKey=XXX failed.`,
@@ -249,7 +259,7 @@ export const fetchFromConfluxscan = async (
     address,
   });
 
-  if (!response.ok) {
+  if (response.status !== HttpStatusCode.Ok) {
     console.warn("Confluxscan API error", {
       url,
       chainId: chain.chainId,
@@ -262,7 +272,7 @@ export const fetchFromConfluxscan = async (
     );
   }
 
-  let resultJson = await response.json();
+  let resultJson = await response.data;
   resultJson = toEspaceResult(resultJson, chain.corespace);
   if (
     resultJson.message === "NOTOK" &&
