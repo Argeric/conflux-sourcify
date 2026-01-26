@@ -35,6 +35,7 @@
     "@shazow/whatsabi": "0.21.1",
     "@solidity-parser/parser": "0.20.1",
     "abitype": "1.0.8",
+    "axios": "^1.13.3",
     "chalk": "4.1.2",
     "config": "3.3.12",
     "dotenv": "^16.5.0",
