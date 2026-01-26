@@ -148,29 +148,56 @@ export class Verification {
     }
 
     // Early bytecode length check:
-    // - For Solidity: bytecode lengths must match exactly
+    // - For Solidity: bytecode lengths must match exactly, except for extra file input bug or no metadata onchain
     // - For Vyper: recompiled bytecode must not be longer than onchain as Vyper appends immutables at deployment
     // We cannot do an early check for creation bytecode length mismatch because
     // creation bytecode length can differ due to constructor arguments being appended at the end
     if (
-      (this.compilation instanceof SolidityCompilation &&
-        compiledRuntimeBytecode.length !==
-          this.onchainRuntimeBytecode.length) ||
-      (this.compilation instanceof VyperCompilation &&
-        compiledRuntimeBytecode.length > this.onchainRuntimeBytecode.length)
+      this.compilation.language === 'Vyper' &&
+      compiledRuntimeBytecode.length > this.onchainRuntimeBytecode.length
+    ) {
+      throw new VerificationError({
+        code: 'bytecode_length_mismatch',
+      });
+    }
+    if (
+      this.compilation.language === 'Solidity' &&
+      compiledRuntimeBytecode.length !== this.onchainRuntimeBytecode.length
     ) {
       // Before throwing the bytecode length mismatch error, check for Solidity extra file input bug
-      if (this.compilation instanceof SolidityCompilation) {
-        const solidityBugType = this.handleSolidityExtraFileInputBug();
-        if (solidityBugType === SolidityBugType.EXTRA_FILE_INPUT_BUG) {
-          throw new VerificationError({
-            code: "extra_file_input_bug",
-          });
-        }
+      const solidityBugType = this.handleSolidityExtraFileInputBug();
+      if (solidityBugType === SolidityBugType.EXTRA_FILE_INPUT_BUG) {
+        throw new VerificationError({
+          code: 'extra_file_input_bug',
+        });
       }
-      throw new VerificationError({
-        code: "bytecode_length_mismatch",
-      });
+
+      // Before throwing the bytecode length mismatch error, check if onchain bytecode has no Solidity metadata
+      // If the onchain bytecode has no metadata, we can still verify it as a partial match
+      // See https://github.com/argotorg/sourcify/issues/2374
+      let noSolidityMetadataInOnchainBytecode = false;
+      try {
+        const decodedOnchainAuxdata = decodeBytecode(
+          this.onchainRuntimeBytecode,
+          AuxdataStyle.SOLIDITY,
+        );
+        if (
+          !decodedOnchainAuxdata.ipfs &&
+          !decodedOnchainAuxdata.bzzr0 &&
+          !decodedOnchainAuxdata.bzzr1
+        ) {
+          noSolidityMetadataInOnchainBytecode = true;
+        }
+      } catch (err: any) {
+        // If decoding fails, assume no metadata is present
+        noSolidityMetadataInOnchainBytecode = true;
+      }
+      // If there is no Solidity metadata in onchain bytecode, we can proceed with verification as a partial match
+      if (!noSolidityMetadataInOnchainBytecode) {
+        throw new VerificationError({
+          code: 'bytecode_length_mismatch',
+        });
+      }
     }
 
     // We need to manually generate the auxdata positions because they are not automatically produced during compilation
@@ -242,8 +269,6 @@ export class Verification {
           this._onchainCreationBytecode = creationBytecode;
           this.txIndex = txReceipt.index;
         }
-
-        await this.matchWithCreationTx();
       } catch (e: any) {
         console.warn("Error matching with creation tx", {
           chain: this.chainId,
@@ -252,6 +277,25 @@ export class Verification {
           error: e.message,
         });
         this.creatorTxHash = undefined;
+      }
+    }
+
+    // If we found the onchain creation bytecode, we try to match it with the compiled creation bytecode
+    if (this._onchainCreationBytecode) {
+      console.debug('Matching with creation tx', {
+        chain: this.chainId,
+        address: this.address,
+        creatorTxHash: this.creatorTxHash,
+      });
+      try {
+        await this.matchWithCreationTx();
+      } catch (e: any) {
+        console.debug('Error matching with creation tx', {
+          chain: this.chainId,
+          address: this.address,
+          creatorTxHash: this.creatorTxHash,
+          error: e.message,
+        });
       }
     }
 

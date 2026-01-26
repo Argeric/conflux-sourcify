@@ -123,6 +123,22 @@ export default {
         },
       ],
     },
+    560048: {
+      name: "Ethereum Hoodi Testnet",
+      supported: true,
+      corespace: false,
+      confluxscanApi: {
+        apiURL: "https://api.etherscan.io/v2",
+        apiKeyEnvName: "ETHERSCAN_API_KEY",
+      },
+      rpc: ["https://0xrpc.io/hoodi"],
+      traceSupportedRPCs: [
+        {
+          type: "trace_transaction",
+          index: 0,
+        },
+      ],
+    },
     31337: {
       name: "Hardhat Network Localhost",
       supported: true,
