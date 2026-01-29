@@ -124,11 +124,27 @@ export class Verification {
     }
 
     if (this.onchainRuntimeBytecode === "0x") {
-      throw new VerificationError({
-        code: "contract_not_deployed",
-        address: this.address,
-        chainId: this.chainId.toString(),
-      });
+      if (!this.creatorTxHash) {
+        throw new VerificationError({
+          code: "contract_not_deployed",
+          address: this.address,
+          chainId: this.chainId.toString()
+        });
+      }
+
+      const creatorTx = await this.sourcifyChain.getTx(this.creatorTxHash);
+      const blockNumber = creatorTx.blockNumber || undefined;
+      this._onchainRuntimeBytecode = await this.sourcifyChain.getBytecode(
+        this.address, blockNumber
+      );
+
+      if (this.onchainRuntimeBytecode === "0x") {
+        throw new VerificationError({
+          code: "contract_not_deployed",
+          address: this.address,
+          chainId: this.chainId.toString()
+        });
+      }
     }
 
     // Compile the contract

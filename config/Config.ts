@@ -35,6 +35,9 @@ export default {
       confluxscanApi: {
         apiURL: "https://api-testnet.confluxscan.org",
       },
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
       rpc: ["http://test.confluxrpc.com"],
       traceSupportedRPCs: [
         {
@@ -42,6 +45,7 @@ export default {
           index: 0,
         },
       ],
+      // announcement: "cfxtest:aca514ancmbdu9u349u4m7d0u4jjdv83py3muarnv1",
     },
     71: {
       name: "Conflux eSpace testnet",
@@ -49,13 +53,17 @@ export default {
       confluxscanApi: {
         apiURL: "https://evmapi-testnet.confluxscan.org",
       },
-      rpc: ["http://evmtestnet.confluxrpc.com"],
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      rpc: ["http://evmtestnet-internal.confluxrpc.com"],
       traceSupportedRPCs: [
         {
           type: "trace_transaction",
           index: 0,
         },
       ],
+      // announcement: "0x623a0340BD4b0817379C8482C92Dd26fb8C5316d",
     },
     1029: {
       name: "Conflux coreSpace mainnet",
@@ -63,6 +71,9 @@ export default {
       corespace: true,
       confluxscanApi: {
         apiURL: "https://api.confluxscan.org",
+      },
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
       },
       rpc: [
         "http://main.confluxrpc.com",
@@ -74,6 +85,7 @@ export default {
           index: 1,
         },
       ],
+      announcement: "cfx:aca514ancmbdu9u349u4m7d0u4jjdv83pyxbdunbz7",
     },
     1030: {
       name: "Conflux eSpace mainnet",
@@ -81,13 +93,17 @@ export default {
       confluxscanApi: {
         apiURL: "https://evmapi.confluxscan.org",
       },
-      rpc: ["http://evm.confluxrpc.com"],
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      rpc: ["http://evm-internal.confluxrpc.com"],
       traceSupportedRPCs: [
         {
           type: "trace_transaction",
           index: 0,
         },
       ],
+      // announcement: "0xdf07c798e70138ca6963ea0db3226e124db59ddd",
     },
     16602: {
       name: "0G Galileo Testnet",

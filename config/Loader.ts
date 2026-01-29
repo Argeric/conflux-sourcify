@@ -24,6 +24,7 @@ export type ChainInstance = SourcifyChainInstance & {
     apiKeyEnvName?: string;
   };
   fetchContractCreationTxUsing?: FetchContractCreationTxUsing;
+  announcement: string;
 };
 
 export interface FetchContractCreationTxUsing
