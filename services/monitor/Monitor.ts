@@ -22,6 +22,13 @@ export class Monitor {
         .map(chain => [chain.chainId, new Chain(chain)])
     );
     this.chainMonitors = Object.values(this.chains).map(chain => new ChainMonitor(chain));
+
+    const handleShutdownSignal = async () => {
+      await this.shutdown();
+      process.exit(0);
+    };
+    process.on("SIGTERM", handleShutdownSignal);
+    process.on("SIGINT", handleShutdownSignal);
   }
 
   /**
@@ -29,33 +36,31 @@ export class Monitor {
    */
   start = async (): Promise<void> => {
     await this.database.init();
-    console.info("Starting Monitor for chains", {
+    console.info("Starting monitor for chains...", {
       numberOfChains: this.chainMonitors.length,
       chains: this.chainMonitors.map((cm) => cm.chain.chainId)
     });
-    const promises: Promise<void>[] = [];
     for (const cm of this.chainMonitors) {
-      promises.push(cm.start());
+      cm.start().then();
     }
-    await Promise.all(promises);
-    console.info("All ChainMonitors started");
   };
+
 
   /**
    * Stops the monitor after executing all the pending requests.
    */
-  stop = (): void => {
+  shutdown = async (): Promise<void> => {
+    console.info("Shutting down monitor...");
     this.chainMonitors.forEach((cm) => cm.stop());
-    console.info("Monitor stopped");
+    console.info("Succeed to stop monitor");
   };
 }
 
 if (require.main === module) {
-  const monitor = new Monitor();
-  monitor
+  new Monitor()
     .start()
     .then(() => {
-      console.log("Monitor started successfully");
+      console.info("Succeed to start monitor");
     })
     .catch((error) => {
       console.error("Failed to start monitor", error);

@@ -602,12 +602,17 @@ export namespace Tables {
     key!: string;
     value!: string;
 
-    static async getNumber(key: string, defaultVal: number): Promise<number> {
-      const str = (await KV.findOne({ where: { key } }) || {}).value;
-      if (!str) {
+    static async getNumber(key: string, defaultVal?: number): Promise<number | null> {
+      const record = await KV.findOne({ where: { key } });
+
+      if (!record) {
+        if (defaultVal === undefined) {
+          return Promise.resolve(null);
+        }
         return Promise.resolve(defaultVal);
       }
-      return Promise.resolve(parseInt(str));
+
+      return Promise.resolve(parseInt(record.value));
     }
 
     static async saveNumber(key: string, value: number, dbTx?: Transaction) {
