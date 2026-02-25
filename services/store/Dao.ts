@@ -15,6 +15,7 @@ import {
 import { QueryTypes, Sequelize, Transaction } from "sequelize";
 import { DatabaseOptions } from "../../config/Loader";
 import { v4 as uuidv4 } from "uuid";
+import IAbiInfo = Tables.IAbiInfo;
 import IContractDeployment = Tables.IContractDeployment;
 import IVerifiedContract = Tables.IVerifiedContract;
 import ISourcifyMatch = Tables.ISourcifyMatch;
@@ -1230,5 +1231,24 @@ export class Dao {
       },
     );
     return records as GetVerificationJobsByChainAndAddressResult[];
+  }
+
+  async listABIsByHash(
+    hash: string
+  ): Promise<IAbiInfo[]> {
+    const records = await this.pool.query(
+      `
+        SELECT
+          *
+        FROM abi_info
+        WHERE hash = ?
+      `,
+      {
+        type: QueryTypes.SELECT,
+        replacements: [hash]
+      }
+    );
+
+    return records as IAbiInfo[];
   }
 }

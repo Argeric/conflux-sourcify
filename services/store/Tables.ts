@@ -596,7 +596,6 @@ export namespace Tables {
   }
 
   export const KEY_SYNC_BLOCK_NUM = 'SYNC_BLOCK_NUM';
-  export const KEY_SYNC_BLOCK_NUM_FINALIZED = 'SYNC_BLOCK_NUM_FINALIZED';
 
   export class KV extends Model<IKV> implements IKV {
     key!: string;

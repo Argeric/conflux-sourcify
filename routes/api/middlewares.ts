@@ -261,3 +261,17 @@ export async function checkIfJobIsAlreadyRunning(
 
   next();
 }
+
+export async function validateFuncSelectorHash(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const { hash } = req.params;
+
+  if (!/^0x[a-fA-F0-9]{8}$/.test(hash)) {
+    throw new InvalidParameterError(`Invalid func selector hash: ${hash}, it's like 0x11223344.`);
+  }
+
+  next();
+}
