@@ -62,7 +62,7 @@ export class Syncer extends BaseSyncer {
 
     await this.store(this.currentBlock, this.currentBlock, logs);
 
-    if (this.currentBlock % 1000 === 0) {
+    if (this.currentBlock % 100 === 0) {
       console.log(`Chain monitor synced block ${this.currentBlock}, chain ${this.chainId}`);
     }
 

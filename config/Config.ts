@@ -39,8 +39,8 @@ export default {
         confluxscanApi: true
       },
       rpc: [
-        "http://test.confluxrpc.com",
-        "http://test-internal.confluxrpc.com"
+        process.env.CHAIN_1_RPC_1 || "http://test.confluxrpc.com",
+        process.env.CHAIN_1_RPC_2 || "http://test-internal.confluxrpc.com"
       ],
       traceSupportedRPCs: [
         {
@@ -63,8 +63,8 @@ export default {
         confluxscanApi: true
       },
       rpc: [
-        "http://evmtestnet.confluxrpc.com",
-        "http://evmtestnet-internal.confluxrpc.com"
+        process.env.CHAIN_71_RPC_1 || "http://evmtestnet.confluxrpc.com",
+        process.env.CHAIN_71_RPC_2 || "http://evmtestnet-internal.confluxrpc.com"
       ],
       traceSupportedRPCs: [
         {
@@ -88,8 +88,8 @@ export default {
         confluxscanApi: true
       },
       rpc: [
-        "http://main.confluxrpc.com",
-        "http://main-internal.confluxrpc.com",
+        process.env.CHAIN_1029_RPC_1 || "http://main.confluxrpc.com",
+        process.env.CHAIN_1029_RPC_2 || "http://main-internal.confluxrpc.com",
       ],
       traceSupportedRPCs: [
         {
@@ -112,8 +112,8 @@ export default {
         confluxscanApi: true
       },
       rpc: [
-        "http://evm.confluxrpc.com",
-        "http://evm-internal.confluxrpc.com"
+        process.env.CHAIN_1030_RPC_1 || "http://evm.confluxrpc.com",
+        process.env.CHAIN_1030_RPC_2 || "http://evm-internal.confluxrpc.com"
       ],
       traceSupportedRPCs: [
         {
