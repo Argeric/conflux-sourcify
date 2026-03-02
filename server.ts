@@ -13,6 +13,7 @@ import { Chain } from "./services/chain/Chain";
 import { heapDump } from "./services/utils/profile-util";
 import { enableHttpProxy } from "./services/utils/util";
 import fileUpload from "express-fileupload";
+import logger, { setLogLevel } from "./services/log/logger";
 
 export type ChainMap = {
   [chainId: string]: Chain;
@@ -24,6 +25,7 @@ export interface ServerOptions {
   chains: ChainMap;
   solc: ISolidityCompiler;
   enableProfile: boolean;
+  logLevel?: string;
 }
 
 export class Server {
@@ -39,6 +41,8 @@ export class Server {
     verificationOptions: VerificationOptions,
     databaseOptions: DatabaseOptions,
   ) {
+    setLogLevel(options.logLevel || "info");
+
     this.app = express();
     this.port = options.port;
     this.enableProfile = options.enableProfile;
@@ -84,16 +88,16 @@ export class Server {
   }
 
   async shutdown() {
-    console.info("Shutting down server");
+    logger.info("Shutting down server");
     if (this.httpServer) {
       await new Promise<void>((resolve) => {
         this.httpServer!.close((error?: Error) => {
           if (error) {
             // only thrown if it was not listening
-            console.error("Error closing server", error);
+            logger.error("Error closing server", error);
             resolve();
           } else {
-            console.info("Server closed");
+            logger.info("Server closed");
             resolve();
           }
         });
@@ -101,7 +105,7 @@ export class Server {
     }
     // Gracefully closing all in-process verifications
     await this.services.close();
-    console.info("Services closed");
+    logger.info("Services closed");
   }
 }
 
@@ -137,7 +141,15 @@ if (require.main === module) {
   server.services.init().then(() => {
     server
       .listen(() => {
-        console.info(`Server listening on ${server.port}`);
+        const e = new Error(" this is a test err");
+        e.name = "this is a test err name"
+        e.stack = "this is a test err stack"
+
+        logger.error(`Server listening on ${server.port}`, {
+          port: server.port,
+          tag: "conflux-sourcify",
+          error: e,
+        });
       })
       .then();
     if (server.enableProfile) {

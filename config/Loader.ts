@@ -14,6 +14,7 @@ export interface Config {
   solc: SolcOptions;
   vyper: VyperOptions;
   mysql: DatabaseOptions;
+  logger: LoggingConfig;
 }
 
 export type ChainInstance = SourcifyChainInstance & {
@@ -95,6 +96,17 @@ export interface DatabaseOptions extends Options {
 export interface SyncOptions {
   batchBlocksOnCatchup?: number;
   delayBlocksAgainstLatest?: number;
+}
+
+export interface LoggingConfig {
+  level: string;
+  alertHook: AlertHookConfig;
+}
+
+export interface AlertHookConfig {
+  level: string; // Level is the minimum level at which alerts will be triggered.
+  channels: string[]; // Channels lists the default alert notification channels to use.
+  async: boolean; // Async configures the behavior of the asynchronous worker for handling log alerts.
 }
 
 export function loadConfig(): Config {
