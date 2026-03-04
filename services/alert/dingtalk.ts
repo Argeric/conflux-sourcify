@@ -3,7 +3,7 @@ import {
   Channel, ChannelType,
   MSG_TYPE_MARKDOWN, MSG_TYPE_TEXT,
   TextMessage, MarkdownMessage, AtParams,
-  DingResponse
+  DingResponse, MsgTypeNotSupportedError
 } from "./types";
 import {
   DingTalkMarkdownFormatter,
@@ -11,20 +11,13 @@ import {
   SimpleTextFormatter
 } from "./formatter/formatter";
 import {
-  Notification,
+  Notification
 } from "./formatter/types";
 
 export class DingTalkError extends Error {
   constructor(message: string, public readonly cause?: Error) {
     super(message);
     this.name = "DingTalkError";
-  }
-}
-
-export class MsgTypeNotSupportedError extends DingTalkError {
-  constructor(msgType: string) {
-    super(`message type ${msgType} not supported`);
-    this.name = "MsgTypeNotSupportedError";
   }
 }
 
