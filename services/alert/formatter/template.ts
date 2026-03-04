@@ -6,10 +6,6 @@ export const escapeMarkdown = (val: any) => {
   return str.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
 };
 
-export const formatRFC3339 = (t: Date) => {
-  return t.toISOString();
-};
-
 export const toStr = (val: any) => {
   if (typeof val === "string") return val;
   return String(val);
@@ -28,7 +24,7 @@ export const simpleTextTemplates = [
 
 Tags: {{tags}}
 Severity: {{severity}}
-Time: {{formatRFC3339 time}}
+Time: {{time}}
 
 {{content}}
 {{#each (mentions)}}@{{this}}{{/each}}
@@ -37,7 +33,7 @@ Time: {{formatRFC3339 time}}
 {{level}}
 
 Tags: {{tags}}
-Time: {{formatRFC3339 time}}
+Time: {{time}}
 
 Message
 {{msg}}
@@ -57,7 +53,7 @@ export const dingTalkMarkdownTemplates = [
 
 - **Tags**: {{tags}}
 - **Severity**: {{severity}}
-- **Time**: {{formatRFC3339 time}}
+- **Time**: {{time}}
 
 **{{content}}**
 {{#each (mentions)}}@{{this}}{{/each}}
@@ -66,7 +62,7 @@ export const dingTalkMarkdownTemplates = [
 # {{level}}
 
 - **Tags**: {{tags}}
-- **Time**: {{formatRFC3339 time}}
+- **Time**: {{time}}
 
 ---
 
@@ -98,14 +94,14 @@ export const telegramMarkdownTemplates = [
 *{{escapeMarkdown title}}*
 *Tags*: {{escapeMarkdown tags}}
 *Severity*: {{escapeMarkdown severity}}
-*Time*: {{escapeMarkdown (formatRFC3339 time)}}
+*Time*: {{escapeMarkdown time}}
 *{{escapeMarkdown (truncateStringWithTail content)}}*
 {{#each (mentions)}}@{{this}} {{/each}}
 `,
 `
 *{{escapeMarkdown level}}*
 *Tags*: {{escapeMarkdown tags}}
-*Time*: {{escapeMarkdown (formatRFC3339 time)}}
+*Time*: {{escapeMarkdown time}}
 
 *Message*
 {{escapeMarkdown (truncateStringWithTail msg)}}

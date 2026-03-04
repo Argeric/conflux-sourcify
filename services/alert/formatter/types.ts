@@ -29,8 +29,9 @@ export interface Notification {
 // Log item interface for TypeScript
 export interface LogItem {
   level: string;
-  time: Date;
   message: string;
+  timestamp?: string;
+  service?: string;
   error?: Error;
-  ctxFields?: Record<string, unknown>;
+  ctxFields?: Record<string, any>;
 }

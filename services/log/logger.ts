@@ -81,10 +81,8 @@ const consoleTransport = new transports.Console({
 
 const hookTransport = new HookTransport({
   format: format.timestamp(),
-  level: "error",
   async: true
 });
-hookTransport.registerHook("error", sendErrorAlert);
 
 const loggerInstance: Logger = createLogger({
   transports: [
@@ -128,8 +126,12 @@ export function setLogLevel(level: string): void {
     );
   }
 
+  hookTransport.level = level;
   consoleTransport.level = level;
   process.env.NODE_LOG_LEVEL = level;
+
+  // TODO register alert hook
+  hookTransport.registerHook("error", sendErrorAlert);
 
   setLibSourcifyLoggerLevel(logLevelStringToNumber(level));
   setCompilersLoggerLevel(logLevelStringToNumber(level));
@@ -137,8 +139,32 @@ export function setLogLevel(level: string): void {
   console.warn(`Setting log level to: ${level}`);
 }
 
+/*
+export interface LogItem {
+  level: string;
+  message: string;
+  timestamp?: string;
+  service?: string;
+  error?: any;
+  ctxFields?: Record<string, any>;
+}
+*/
+
+/*
+interface LogItem {
+  level: string;
+  message: string;
+  timestamp: string;
+  service: string;
+  [optionName: string]: any;
+}
+*/
+
 async function sendErrorAlert(info: LogItem): Promise<void> {
-  const { level, message, timestamp, service, ...metadata } = info;
+  const { level, message, timestamp, service, ...meta } = info;
   console.log(`🔔 Sending error alert: ${JSON.stringify({ level, message, timestamp, service })}`);
-  console.log(`🔔 Sending error alert metadata: ${JSON.stringify(metadata)}`);
+
+  const { error, ...cfxFields } = meta;
+  console.log(`🔔 Sending error alert error: `, error, typeof error);
+  console.log(`🔔 Sending error alert metadata: ${JSON.stringify(cfxFields)}`);
 }

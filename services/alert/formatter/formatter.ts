@@ -1,6 +1,6 @@
 import { severityToString, Notification, LogItem } from "./types";
 import {
-  dingTalkMarkdownTemplates, escapeMarkdown, formatRFC3339,
+  dingTalkMarkdownTemplates, escapeMarkdown,
   simpleTextTemplates,
   telegramMarkdownTemplates, toStr, truncateStringWithTail
 } from "./template";
@@ -14,11 +14,11 @@ interface TplData {
   title?: string;
   tags?: string[];
   severity?: string;
-  time?: Date;
+  time?: string;
   content?: any;
   level?: string;
   msg?: string;
-  error?: Error | null;
+  error?: Error;
   ctxFields?: Record<string, any>;
   mentions?: string[];
 }
@@ -39,22 +39,22 @@ class TplFormatter implements Formatter {
     return this.formatDefault(note);
   }
 
-  private isLogItem(content: any): content is LogItem {
+  private isLogItem(content: any): boolean {
     return (content as LogItem)?.level !== undefined &&
       (content as LogItem)?.message !== undefined;
   }
 
   private formatLogItem(note: Notification): string {
     const entry = note.content as LogItem;
-    const entryError = entry.error;
 
+    const entryError = entry.error;
     const ctxFields: Record<string, any> = { ...entry.ctxFields };
 
     const data: TplData = {
-      level: entry.level,
       tags: this.tags,
-      time: entry.time,
+      level: entry.level,
       msg: entry.message,
+      time: entry.timestamp,
       error: entryError,
       ctxFields: ctxFields
     };
@@ -67,7 +67,7 @@ class TplFormatter implements Formatter {
       title: note.title,
       tags: this.tags,
       severity: severityToString(note.severity),
-      time: new Date(),
+      time: new Date().toISOString(),
       content: note.content
     };
 
@@ -101,7 +101,6 @@ export class DingTalkMarkdownFormatter implements Formatter {
     this.formatter = new MarkdownFormatter(
       tags,
       {
-        formatRFC3339,
         mentions: () => {
           return mentions;
         }
@@ -125,7 +124,6 @@ export class TelegramMarkdownFormatter implements Formatter {
       {
         toStr,
         escapeMarkdown,
-        formatRFC3339,
         truncateStringWithTail,
         mentions: () => {
           return mentions;
@@ -147,7 +145,6 @@ export class SimpleTextFormatter implements Formatter {
   constructor(tags: string[], mentions: string[]) {
     const instance = Handlebars.create();
     Object.entries({
-      formatRFC3339,
       mentions: () => {
         return mentions;
       }
