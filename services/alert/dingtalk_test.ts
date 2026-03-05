@@ -13,6 +13,7 @@ async function example() {
     "dingtalk-1",
     formatter,
     {
+      type: "dingtalk",
       webhook: "https://oapi.dingtalk.com/robot/send?access_token=xxx",
       secret: "xxx",
       msgType: "markdown",

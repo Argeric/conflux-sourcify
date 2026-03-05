@@ -6,6 +6,7 @@ import {
   FetchRequestRPC,
 } from "@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes";
 import { Conflux } from "js-conflux-sdk";
+import { AlertConfig } from "../services/alert/types";
 
 export interface Config {
   server: ServerOptions;
@@ -14,7 +15,8 @@ export interface Config {
   solc: SolcOptions;
   vyper: VyperOptions;
   mysql: DatabaseOptions;
-  logger: LoggingConfig;
+  log: LoggingConfig;
+  alert: AlertConfig;
 }
 
 export type ChainInstance = SourcifyChainInstance & {
@@ -118,5 +120,6 @@ export function loadConfig(): Config {
     }
   }
 
+  console.log(`debug config ===1===`, JSON.stringify(config));
   return config;
 }

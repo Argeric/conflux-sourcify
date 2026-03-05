@@ -1,6 +1,8 @@
 import {
   Notification
 } from "./formatter/types";
+import { DingTalkConfig } from "./dingtalk";
+import { TelegramConfig } from "./telegram";
 
 export type ChannelType = "dingtalk" | "telegram";
 
@@ -10,6 +12,10 @@ export interface Channel {
   type(): ChannelType;
 
   send(note: Notification): Promise<void>;
+}
+
+export interface ChannelConfig {
+  type: ChannelType;
 }
 
 export const MSG_TYPE_MARKDOWN = "markdown";
@@ -46,10 +52,21 @@ export interface DingResponse {
   errmsg: string;
 }
 
+export interface AlertConfig {
+  customTags?: string[];
+  channels: Record<string, DingTalkConfig | TelegramConfig>;
+}
 
 export class MsgTypeNotSupportedError extends Error {
   constructor(msgType: string) {
     super(`message type ${msgType} not supported`);
     this.name = "MsgTypeNotSupportedError";
+  }
+}
+
+export class ChannelTypeNotSupportedError extends Error {
+  constructor(chType: string) {
+    super(`channel type ${chType} not supported`);
+    this.name = 'ChannelTypeNotSupportedError';
   }
 }

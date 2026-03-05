@@ -3,7 +3,7 @@ import {
   Channel, ChannelType,
   MSG_TYPE_MARKDOWN, MSG_TYPE_TEXT,
   TextMessage, MarkdownMessage, AtParams,
-  DingResponse, MsgTypeNotSupportedError
+  DingResponse, MsgTypeNotSupportedError, ChannelConfig
 } from "./types";
 import {
   DingTalkMarkdownFormatter,
@@ -21,7 +21,7 @@ export class DingTalkError extends Error {
   }
 }
 
-export interface DingTalkConfig {
+export interface DingTalkConfig extends ChannelConfig{
   webhook: string;         // webhook URL
   secret?: string;         // secret token
   atMobiles?: string[];    // mobiles for @ members
@@ -40,10 +40,15 @@ export class DingTalkChannel implements Channel {
     fmt: Formatter,
     config: DingTalkConfig
   ) {
+    if (!config.webhook) {
+      throw new Error("DingTalk webhook is required");
+    }
+
     this.id = chId;
     this.formatter = fmt;
 
     this.config = {
+      type: config.type,
       webhook: config.webhook,
       secret: config.secret,
       atMobiles: config.atMobiles || [],
@@ -200,13 +205,13 @@ export class Robot {
 export function createDingtalkMsgFormatter(
   msgType: string,
   tags: string[],
-  mentions: string[]
+  mentions?: string[]
 ): Formatter {
   const normalizedMsgType = msgType.toLowerCase();
   if (normalizedMsgType === MSG_TYPE_TEXT) {
-    return new SimpleTextFormatter(tags, mentions);
+    return new SimpleTextFormatter(tags, mentions || []);
   } else if (normalizedMsgType === MSG_TYPE_MARKDOWN) {
-    return new DingTalkMarkdownFormatter(tags, mentions);
+    return new DingTalkMarkdownFormatter(tags, mentions || []);
   } else {
     throw new MsgTypeNotSupportedError(msgType);
   }

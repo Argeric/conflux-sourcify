@@ -2,7 +2,7 @@ import { Formatter } from "./formatter/formatter";
 import { Notification } from "./formatter/types";
 import TelegramBot from "node-telegram-bot-api";
 import { SimpleTextFormatter, TelegramMarkdownFormatter } from "./formatter/formatter";
-import { MSG_TYPE_MARKDOWN, MSG_TYPE_TEXT, MsgTypeNotSupportedError } from "./types";
+import { ChannelConfig, ChannelType, MSG_TYPE_MARKDOWN, MSG_TYPE_TEXT, MsgTypeNotSupportedError } from "./types";
 
 export class TelegramError extends Error {
   constructor(message: string, public readonly cause?: Error) {
@@ -11,7 +11,7 @@ export class TelegramError extends Error {
   }
 }
 
-export interface TelegramConfig {
+export interface TelegramConfig extends ChannelConfig{
   apiToken: string;      // Api token
   chatId: string;        // Chat ID
   atUsers?: string[];    // Mention users
@@ -28,10 +28,18 @@ export class TelegramChannel {
     fmt: Formatter,
     config: TelegramConfig
   ) {
+    if (!config.apiToken) {
+      throw new Error("Telegram API token is required");
+    }
+    if (!config.chatId) {
+      throw new Error("Telegram chat ID is required");
+    }
+
     this.id = chId;
     this.formatter = fmt;
 
     this.config = {
+      type: config.type,
       apiToken: config.apiToken,
       chatId: config.chatId,
       atUsers: config.atUsers || []
@@ -46,7 +54,7 @@ export class TelegramChannel {
     return this.id;
   }
 
-  type(): string {
+  type(): ChannelType {
     return "telegram";
   }
 

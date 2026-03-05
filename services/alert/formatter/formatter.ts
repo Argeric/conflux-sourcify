@@ -118,7 +118,7 @@ export class DingTalkMarkdownFormatter implements Formatter {
 export class TelegramMarkdownFormatter implements Formatter {
   private formatter: MarkdownFormatter;
 
-  constructor(tags: string[], mentions: string[]) {
+  constructor(tags: string[], mentions?: string[]) {
     this.formatter = new MarkdownFormatter(
       tags,
       {
@@ -126,7 +126,7 @@ export class TelegramMarkdownFormatter implements Formatter {
         escapeMarkdown,
         truncateStringWithTail,
         mentions: () => {
-          return mentions;
+          return mentions || [];
         }
       },
       telegramMarkdownTemplates[0],
