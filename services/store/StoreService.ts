@@ -21,6 +21,7 @@ import {
   VerificationJob,
   Match,
   VerificationJobId,
+  VerifiedABI
 } from "../../routes/types";
 import Path from "path";
 import {
@@ -892,4 +893,20 @@ export class StoreService extends StoreBase implements RWStorageService {
       throw e;
     });
   }
+
+  async listABIsByHash(
+    hash: string
+  ): Promise<{ results: VerifiedABI[] }> {
+    const verifiedABIsResult = await this.database.listABIsByHash(hash);
+
+    const results: VerifiedABI[] = verifiedABIsResult.map(
+      (row) => ({
+        hash: row.hash,
+        signature: row.signature,
+        fullFormat: row.full_format
+      })
+    );
+
+    return { results };
+  };
 }

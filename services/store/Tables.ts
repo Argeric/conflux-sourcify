@@ -23,7 +23,7 @@ import {
   Nullable,
 } from "../../routes/types";
 import { keccak256 } from "ethers";
-import { DataTypes, Model, Sequelize } from "sequelize";
+import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
 
@@ -62,7 +62,6 @@ export namespace Tables {
         {
           tableName: "code",
           sequelize,
-          timestamps: true,
           indexes: [],
         },
       );
@@ -591,6 +590,99 @@ export namespace Tables {
     }
   }
 
+  export interface IKV {
+    key: string;
+    value: string;
+  }
+
+  export const KEY_SYNC_BLOCK_NUM = 'SYNC_BLOCK_NUM';
+
+  export class KV extends Model<IKV> implements IKV {
+    key!: string;
+    value!: string;
+
+    static async getNumber(key: string, defaultVal?: number): Promise<number | null> {
+      const record = await KV.findOne({ where: { key } });
+
+      if (!record) {
+        if (defaultVal === undefined) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(defaultVal);
+      }
+
+      return Promise.resolve(parseInt(record.value));
+    }
+
+    static async saveNumber(key: string, value: number, dbTx?: Transaction) {
+      return KV.upsert({ key, value: value.toString() }, { transaction: dbTx });
+    }
+
+    static async getString(key: string, defaultVal: string) {
+      return (await KV.findOne({ where: { key } }) || {}).value || defaultVal;
+    }
+
+    static async getSwitch(key: string): Promise<boolean> {
+      const str = (await KV.findOne({ where: { key } }) || {}).value;
+      return Promise.resolve((str || "").toLowerCase() === "true");
+    }
+
+    static register(sequelize: Sequelize) {
+      KV.init({
+        key: { type: DataTypes.CHAR(64), primaryKey: true },
+        value: DataTypes.STRING(8192)
+      }, {
+        sequelize,
+        tableName: "config",
+        timestamps: false
+      });
+    }
+  }
+
+  export interface IAbiInfo {
+    id?: number;
+    hash: string;
+    signature: string;
+    full_format: string;
+    updatedAt?: Date;
+  }
+
+  export const MAX_LEN_EVENT_SIG = 1024;
+
+  export class AbiInfo extends Model<IAbiInfo> implements IAbiInfo {
+    id?: number;
+    hash!: string;
+    signature!: string;
+    full_format!: string;
+    updatedAt?: Date;
+
+    static register(sequelize: Sequelize) {
+      AbiInfo.init({
+        id: { type: DataTypes.BIGINT, allowNull: false, primaryKey: true, autoIncrement: true },
+        hash: { type: DataTypes.CHAR(10), allowNull: false },
+        signature: { type: DataTypes.STRING(1024), allowNull: false },
+        full_format: { type: DataTypes.STRING(MAX_LEN_EVENT_SIG * 4), allowNull: false },
+        updatedAt: { type: DataTypes.DATE, allowNull: false }
+      }, {
+        sequelize: sequelize,
+        tableName: "abi_info",
+        charset: "ascii",
+        collate: "ascii_general_ci",
+        indexes: [
+          {
+            name: "idx_sig",
+            unique: true,
+            fields: ["signature"]
+          },
+          {
+            name: "idx_hash",
+            fields: ["hash"]
+          }
+        ]
+      });
+    }
+  }
+
   export async function initModel(sequelize: Sequelize) {
     Code.register(sequelize);
     Contract.register(sequelize);
@@ -602,6 +694,8 @@ export namespace Tables {
     SourcifyMatch.register(sequelize);
     VerificationJob.register(sequelize);
     VerificationJobEphemeral.register(sequelize);
+    KV.register(sequelize);
+    AbiInfo.register(sequelize);
   }
 }
 

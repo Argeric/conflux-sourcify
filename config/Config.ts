@@ -35,38 +35,12 @@ export default {
       confluxscanApi: {
         apiURL: "https://api-testnet.confluxscan.org",
       },
-      rpc: ["http://test.confluxrpc.com"],
-      traceSupportedRPCs: [
-        {
-          type: "trace_transaction",
-          index: 0,
-        },
-      ],
-    },
-    71: {
-      name: "Conflux eSpace testnet",
-      supported: true,
-      confluxscanApi: {
-        apiURL: "https://evmapi-testnet.confluxscan.org",
-      },
-      rpc: ["http://evmtestnet.confluxrpc.com"],
-      traceSupportedRPCs: [
-        {
-          type: "trace_transaction",
-          index: 0,
-        },
-      ],
-    },
-    1029: {
-      name: "Conflux coreSpace mainnet",
-      supported: true,
-      corespace: true,
-      confluxscanApi: {
-        apiURL: "https://api.confluxscan.org",
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
       },
       rpc: [
-        "http://main.confluxrpc.com",
-        "http://main-internal.confluxrpc.com",
+        process.env.CHAIN_1_RPC_1 || "http://test.confluxrpc.com",
+        process.env.CHAIN_1_RPC_2 || "http://test-internal.confluxrpc.com"
       ],
       traceSupportedRPCs: [
         {
@@ -74,6 +48,59 @@ export default {
           index: 1,
         },
       ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: "cfxtest:aca514ancmbdu9u349u4m7d0u4jjdv83py3muarnv1",
+    },
+    71: {
+      name: "Conflux eSpace testnet",
+      supported: true,
+      confluxscanApi: {
+        apiURL: "https://evmapi-testnet.confluxscan.org",
+      },
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      rpc: [
+        process.env.CHAIN_71_RPC_1 || "http://evmtestnet.confluxrpc.com",
+        process.env.CHAIN_71_RPC_2 || "http://evmtestnet-internal.confluxrpc.com"
+      ],
+      traceSupportedRPCs: [
+        {
+          type: "trace_transaction",
+          index: 1,
+        },
+      ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: "0x623a0340BD4b0817379C8482C92Dd26fb8C5316d",
+    },
+    1029: {
+      name: "Conflux coreSpace mainnet",
+      supported: true,
+      corespace: true,
+      confluxscanApi: {
+        apiURL: "https://api-stage.confluxscan.org",
+      },
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      rpc: [
+        process.env.CHAIN_1029_RPC_1 || "http://main.confluxrpc.com",
+        process.env.CHAIN_1029_RPC_2 || "http://main-internal.confluxrpc.com",
+      ],
+      traceSupportedRPCs: [
+        {
+          type: "trace_transaction",
+          index: 1,
+        },
+      ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: "cfx:aca514ancmbdu9u349u4m7d0u4jjdv83pyxbdunbz7",
     },
     1030: {
       name: "Conflux eSpace mainnet",
@@ -81,13 +108,23 @@ export default {
       confluxscanApi: {
         apiURL: "https://evmapi.confluxscan.org",
       },
-      rpc: ["http://evm.confluxrpc.com"],
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      rpc: [
+        process.env.CHAIN_1030_RPC_1 || "http://evm.confluxrpc.com",
+        process.env.CHAIN_1030_RPC_2 || "http://evm-internal.confluxrpc.com"
+      ],
       traceSupportedRPCs: [
         {
           type: "trace_transaction",
-          index: 0,
+          index: 1,
         },
       ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: "0xdf07c798e70138ca6963ea0db3226e124db59ddd",
     },
     16602: {
       name: "0G Galileo Testnet",

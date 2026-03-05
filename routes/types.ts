@@ -124,6 +124,12 @@ export interface VerificationJob {
   contract: VerifiedContractMinimal;
 }
 
+export interface VerifiedABI {
+  hash: string;
+  signature: string;
+  fullFormat: string;
+}
+
 /**
  * An array wrapper with info properties.
  */

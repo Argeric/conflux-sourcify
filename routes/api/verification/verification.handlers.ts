@@ -41,6 +41,7 @@ export async function verifyFromJsonInputEndpoint(
     chainId: req.params.chainId,
     address: req.params.address,
     stdJsonInput: req.body.stdJsonInput,
+    settings: JSON.stringify(req.body.stdJsonInput.settings),
     compilerVersion: req.body.compilerVersion,
     contractIdentifier: req.body.contractIdentifier,
     constructorArguments: req.body.constructorArguments,

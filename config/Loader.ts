@@ -24,6 +24,8 @@ export type ChainInstance = SourcifyChainInstance & {
     apiKeyEnvName?: string;
   };
   fetchContractCreationTxUsing?: FetchContractCreationTxUsing;
+  announcement: string;
+  sync?: SyncOptions;
 };
 
 export interface FetchContractCreationTxUsing
@@ -88,6 +90,11 @@ export interface VyperOptions {
 export interface DatabaseOptions extends Options {
   syncSchema: boolean;
   readonly: boolean;
+}
+
+export interface SyncOptions {
+  batchBlocksOnCatchup?: number;
+  delayBlocksAgainstLatest?: number;
 }
 
 export function loadConfig(): Config {

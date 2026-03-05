@@ -2,57 +2,41 @@ import { ContractCreationFetcher } from "@ethereum-sourcify/lib-sourcify";
 import { StatusCodes } from "http-status-codes";
 import { Chain } from "../chain/Chain";
 import { format } from "js-conflux-sdk";
+import axios, { HttpStatusCode } from "axios";
+import { ConfluxscanRequestFailedError } from "../../routes/api/errors";
 
 const CONFLUXSCAN_REGEX = ["at txn.*href=.*/tx/(0x.{64})"]; // save as string to be able to return the txRegex in /chains response. If stored as RegExp returns {}
 const CONFLUXSCAN_SUFFIX = "address/${ADDRESS}";
 const CONFLUXSCAN_API_SUFFIX = `/api?module=contract&action=getcontractcreation&contractaddresses=\${ADDRESS}&apikey=`;
+const CONFLUXSCAN_CORE_API_SUFFIX = `/contract/getContractCreation?contractaddresses=\${ADDRESS}&apikey=`;
 
-function getApiContractCreationFetcher(
-  url: string,
-  responseParser: (response: any) => string | undefined,
-): ContractCreationFetcher {
-  return {
-    type: "api",
-    url,
-    responseParser,
-  };
-}
-
-function getScrapeContractCreationFetcher(
-  url: string,
-  scrapeRegex: string[],
+function getConfluxscanScrapeContractCreatorFetcher(
+  apiURL: string
 ): ContractCreationFetcher {
   return {
     type: "scrape",
-    url,
-    scrapeRegex,
+    url: apiURL + CONFLUXSCAN_SUFFIX,
+    scrapeRegex: CONFLUXSCAN_REGEX
   };
 }
 
-function getConfluxscanScrapeContractCreatorFetcher(
-  apiURL: string,
-): ContractCreationFetcher {
-  return getScrapeContractCreationFetcher(
-    apiURL + CONFLUXSCAN_SUFFIX,
-    CONFLUXSCAN_REGEX,
-  );
-}
-
-// api?module=contract&action=getcontractcreation&contractaddresses=\${ADDRESS}&apikey=
 // For chains with the new Confluxscan api that has contract creator tx hash endpoint
 function getConfluxscanApiContractCreatorFetcher(
   apiURL: string,
   apiKey: string,
+  coreSpace: boolean,
 ): ContractCreationFetcher {
-  return getApiContractCreationFetcher(
-    apiURL + CONFLUXSCAN_API_SUFFIX + apiKey,
-    (response: any) => {
-      if (response?.result?.[0]?.txHash) {
-        return response?.result?.[0]?.txHash as string;
+  return {
+    type: "api",
+    url: apiURL + (coreSpace ? CONFLUXSCAN_CORE_API_SUFFIX : CONFLUXSCAN_API_SUFFIX) + apiKey,
+    responseParser: (response: any) => {
+      const tx = coreSpace ? response?.data?.[0] : response?.result?.[0];
+      if (tx?.txHash) {
+        return tx?.txHash as string;
       }
       return undefined;
     },
-  );
+  };
 }
 
 async function getCreatorTxUsingFetcher(
@@ -69,9 +53,7 @@ async function getCreatorTxUsingFetcher(
   );
 
   console.debug("Fetching Creator Tx", {
-    fetcher,
     contractFetchAddressFilled,
-    contractAddress,
   });
 
   if (!contractFetchAddressFilled) return null;
@@ -86,9 +68,7 @@ async function getCreatorTxUsingFetcher(
           );
           if (creatorTx) {
             console.debug("Fetched and found creator Tx", {
-              fetcher,
               contractFetchAddressFilled,
-              contractAddress,
               creatorTx,
             });
             return creatorTx;
@@ -101,9 +81,7 @@ async function getCreatorTxUsingFetcher(
           const response = await fetchFromApi(contractFetchAddressFilled);
           const creatorTx = fetcher?.responseParser(response);
           console.debug("Fetched Creator Tx", {
-            fetcher,
             contractFetchAddressFilled,
-            contractAddress,
             creatorTx,
           });
           if (creatorTx) {
@@ -175,14 +153,23 @@ async function getCreatorTxByScraping(
 }
 
 async function fetchFromApi(fetchAddress: string) {
-  const res = await fetch(fetchAddress);
-  if (res.status === StatusCodes.OK) {
-    const response = await res.json();
-    return response;
+  const response = await axios({
+    method: "GET",
+    url: fetchAddress,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    timeout: 30000,
+    family: 4
+  });
+
+  if (response.status === HttpStatusCode.Ok) {
+    return response.data;
   }
 
   throw new Error(
-    `Contract creator tx could not be fetched from ${fetchAddress} because of status code ${res.status}`,
+    `Contract creator tx could not be fetched from ${fetchAddress} because of status code ${response.status}`
   );
 }
 
@@ -206,6 +193,7 @@ export const getCreatorTx = async (
     const fetcher = getConfluxscanApiContractCreatorFetcher(
       chain.confluxscanApi.apiURL,
       apiKey || "",
+      Boolean(chain.corespace),
     );
     const result = await getCreatorTxUsingFetcher(fetcher, contractAddress);
     if (result) {

@@ -2,6 +2,7 @@ import { Router } from "express"; // static is a reserved word
 import lookupRoutes from "./api/lookup/lookup.routes";
 import jobsRoutes from "./api/jobs/jobs.routes";
 import verificationRoutes from "./api/verification/verification.routes";
+import abiRoutes from "./api/abi/abi.routes";
 import { ChainMap } from "../server";
 
 const router: Router = Router();
@@ -43,5 +44,6 @@ router.get("/chains", (_req, res) => {
 router.use("/", lookupRoutes);
 router.use("/", verificationRoutes);
 router.use("/", jobsRoutes);
+router.use("/", abiRoutes);
 
 export default router;
