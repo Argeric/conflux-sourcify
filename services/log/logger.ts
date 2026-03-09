@@ -5,7 +5,8 @@ import path from "path";
 import { setLibSourcifyLoggerLevel } from "@ethereum-sourcify/lib-sourcify";
 import { setCompilersLoggerLevel } from "@ethereum-sourcify/compilers";
 import dotenv from "dotenv";
-import { HookTransport, LogItem } from "./hook/hook";
+import { addAlertHook, HookTransport } from "./hook/hook";
+import { LoggingConfig } from "../../config/Loader";
 
 dotenv.config({ path: path.resolve(__dirname, "../..", ".env") });
 
@@ -117,7 +118,8 @@ const logLevelStringToNumber = (level: string): number => {
 };
 
 // Function to change the log level dynamically
-export function setLogLevel(level: string): void {
+export function setLogLevel(log: LoggingConfig): void {
+  const level = log.level;
   if (!validLogLevels.includes(level)) {
     throw new Error(
       `Invalid log level: ${level}. level can take: ${validLogLevels.join(
@@ -126,45 +128,13 @@ export function setLogLevel(level: string): void {
     );
   }
 
-  hookTransport.level = level;
   consoleTransport.level = level;
   process.env.NODE_LOG_LEVEL = level;
-
-  // TODO register alert hook
-  hookTransport.registerHook("error", sendErrorAlert);
 
   setLibSourcifyLoggerLevel(logLevelStringToNumber(level));
   setCompilersLoggerLevel(logLevelStringToNumber(level));
 
-  console.warn(`Setting log level to: ${level}`);
-}
+  addAlertHook(hookTransport, log.alertHook);
 
-/*
-export interface LogItem {
-  level: string;
-  message: string;
-  timestamp?: string;
-  service?: string;
-  error?: any;
-  ctxFields?: Record<string, any>;
-}
-*/
-
-/*
-interface LogItem {
-  level: string;
-  message: string;
-  timestamp: string;
-  service: string;
-  [optionName: string]: any;
-}
-*/
-
-async function sendErrorAlert(info: LogItem): Promise<void> {
-  const { level, message, timestamp, service, ...meta } = info;
-  console.log(`🔔 Sending error alert: ${JSON.stringify({ level, message, timestamp, service })}`);
-
-  const { error, ...cfxFields } = meta;
-  console.log(`🔔 Sending error alert error: `, error, typeof error);
-  console.log(`🔔 Sending error alert metadata: ${JSON.stringify(cfxFields)}`);
+  console.info(`Succeed to set log level: ${level}`);
 }

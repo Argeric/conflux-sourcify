@@ -50,7 +50,8 @@ export class Manager {
   }
 }
 
-export async function initFromConfig(config: AlertConfig) {
+export function initAlertMgrFromConfig(alertConfig: AlertConfig) {
+  const config = alertConfig || {};
   const customTags = config.customTags || ["dev"];
 
   if (!config.channels) {
@@ -60,7 +61,7 @@ export async function initFromConfig(config: AlertConfig) {
 
   for (const [chId, chConfig] of Object.entries(config.channels)) {
     try {
-      const channel = await initAlertChannel(
+      const channel = initAlertChannel(
         chId,
         chConfig,
         customTags
@@ -77,11 +78,11 @@ export async function initFromConfig(config: AlertConfig) {
   }
 }
 
-async function initAlertChannel(
+function initAlertChannel(
   chId: string,
   chConfig: DingTalkConfig | TelegramConfig,
   customTags: string[]
-): Promise<Channel | null> {
+): Channel | null {
   const platform = chConfig["type"] as string;
 
   if (!platform) {

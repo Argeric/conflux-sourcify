@@ -59,14 +59,14 @@ export interface AlertConfig {
 
 export class MsgTypeNotSupportedError extends Error {
   constructor(msgType: string) {
-    super(`message type ${msgType} not supported`);
+    super(`Message type ${msgType} not supported`);
     this.name = "MsgTypeNotSupportedError";
   }
 }
 
 export class ChannelTypeNotSupportedError extends Error {
   constructor(chType: string) {
-    super(`channel type ${chType} not supported`);
+    super(`Channel type ${chType} not supported`);
     this.name = 'ChannelTypeNotSupportedError';
   }
 }

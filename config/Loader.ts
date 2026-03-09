@@ -7,6 +7,7 @@ import {
 } from "@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes";
 import { Conflux } from "js-conflux-sdk";
 import { AlertConfig } from "../services/alert/types";
+import { initAlertMgrFromConfig } from "../services/alert/manager";
 
 export interface Config {
   server: ServerOptions;
@@ -102,7 +103,7 @@ export interface SyncOptions {
 
 export interface LoggingConfig {
   level: string;
-  alertHook: AlertHookConfig;
+  alertHook?: AlertHookConfig;
 }
 
 export interface AlertHookConfig {
@@ -120,6 +121,7 @@ export function loadConfig(): Config {
     }
   }
 
-  console.log(`debug config ===1===`, JSON.stringify(config));
+  initAlertMgrFromConfig(config.alert);
+
   return config;
 }

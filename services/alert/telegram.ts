@@ -81,7 +81,7 @@ export class TelegramChannel {
         throw error;
       }
 
-      throw new TelegramError("failed to send telegram message", error as Error);
+      throw new TelegramError("Failed to send telegram message", error as Error);
     }
   }
 

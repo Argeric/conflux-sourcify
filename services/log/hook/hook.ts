@@ -1,9 +1,13 @@
-import winston, { type LogEntry } from "winston";
-import Transport from 'winston-transport';
+import { type LogEntry } from "winston";
+import Transport from "winston-transport";
+import { defaultManager } from "../../alert/manager";
+import { Notification, Severity } from "../../alert/formatter/types";
+import { Channel } from "../../alert/types";
 
 export type LogItem = LogEntry & {
   timestamp: string;
   service?: string;
+  error?: any;
 };
 
 interface HookCallback {
@@ -27,7 +31,7 @@ export class HookTransport extends Transport {
 
     this.asyncMode = options.async || false;
 
-    const levels = ['error', 'warn', 'info', 'debug', 'silly'];
+    const levels = ["error", "warn", "info", "debug", "silly"];
     levels.forEach(level => {
       this.hooks[level] = new Set();
     });
@@ -104,5 +108,59 @@ export class HookTransport extends Transport {
 
   private handleHookError(error: unknown, info: LogItem): void {
     console.error(`Hook execution error for level ${info.level}:`, error);
+  }
+}
+
+const alertMsgTitle = "log alert notification";
+
+export function addAlertHook(
+  transport: HookTransport,
+  config?: { level: string, channels: string[], async?: boolean }
+) {
+  if (!config?.channels?.length) {
+    return;
+  }
+
+  const chs = [] as Channel[];
+  for (const chn of config.channels) {
+    const ch = defaultManager().channel(chn);
+    if (ch) {
+      chs.push(ch);
+    }
+  }
+
+  if (!chs.length) {
+    return;
+  }
+
+  const hook = async function sendErrorAlert(info: LogItem): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { level, message, timestamp, service, error, ...ctxFields } = info;
+    info.ctxFields = ctxFields;
+
+    const notification: Notification = {
+      title: alertMsgTitle,
+      content: info,
+      severity: adaptSeverity(info.level)
+    };
+
+    for (const ch of chs) {
+      await ch.send(notification);
+    }
+  };
+
+  transport.level = config.level;
+  transport.registerHook(config.level, hook);
+  console.info(`Succeed to set alert hooking level: ${config.level}`);
+}
+
+function adaptSeverity(lvl: string): Severity {
+  switch (lvl) {
+    case "error":
+      return Severity.High;
+    case "warn":
+      return Severity.Medium;
+    default:
+      return Severity.Low;
   }
 }

@@ -83,7 +83,7 @@ export class DingTalkChannel implements Channel {
         throw error;
       }
 
-      throw new DingTalkError("failed to format alert msg", error as Error);
+      throw new DingTalkError("Failed to send ding msg", error as Error);
     }
   }
 }
@@ -170,19 +170,19 @@ export class Robot {
       });
 
       if (!response.ok) {
-        throw new DingTalkError(`HTTP error! status: ${response.status}`);
+        throw new DingTalkError(`Failed to send ding message. HTTP status: ${response.status}`);
       }
 
       const data = await response.json() as DingResponse;
 
       if (data.errcode !== 0) {
-        throw new DingTalkError(`dingrobot send failed: ${data.errmsg}`);
+        throw new DingTalkError(`Failed to send ding message. Err code: ${data.errmsg}`);
       }
     } catch (error) {
       if (error instanceof DingTalkError) {
         throw error;
       }
-      throw new DingTalkError("failed to send message", error as Error);
+      throw new DingTalkError("Failed to send ding message", error as Error);
     }
   }
 

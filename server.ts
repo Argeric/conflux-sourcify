@@ -7,7 +7,7 @@ import routes from "./routes/routes";
 import genericErrorHandler from "./common/errors/GenericErrorHandler";
 import { Services } from "./services/services";
 import { VerificationOptions } from "./services/verification/VerificationService";
-import { DatabaseOptions, loadConfig } from "./config/Loader";
+import { DatabaseOptions, loadConfig, LoggingConfig } from "./config/Loader";
 import { SolcLocal } from "./services/compiler/SolcLocal";
 import { Chain } from "./services/chain/Chain";
 import { heapDump } from "./services/utils/profile-util";
@@ -25,7 +25,7 @@ export interface ServerOptions {
   chains: ChainMap;
   solc: ISolidityCompiler;
   enableProfile: boolean;
-  logLevel?: string;
+  log?: LoggingConfig;
 }
 
 export class Server {
@@ -41,7 +41,7 @@ export class Server {
     verificationOptions: VerificationOptions,
     databaseOptions: DatabaseOptions,
   ) {
-    setLogLevel(options.logLevel || "info");
+    setLogLevel(options.log || {level: "info"});
 
     this.app = express();
     this.port = options.port;
@@ -126,6 +126,7 @@ if (require.main === module) {
       enableProfile: config.server.enableProfile,
       chains: chainMap,
       solc,
+      log: config.log,
     },
     {
       chains: chainMap,
@@ -140,17 +141,7 @@ if (require.main === module) {
 
   server.services.init().then(() => {
     server
-      .listen(() => {
-        const e = new Error(" this is a test err");
-        e.name = "this is a test err name"
-        e.stack = "this is a test err stack"
-
-        logger.error(`Server listening on ${server.port}`, {
-          port: server.port,
-          tag: "conflux-sourcify",
-          error: e,
-        });
-      })
+      .listen(() => logger.info(`Server listening on ${server.port}`))
       .then();
     if (server.enableProfile) {
       const fileName = path.basename(__filename);
