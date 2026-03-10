@@ -5,6 +5,7 @@ import { ChainMap } from "../../server";
 import { ChainMonitor } from "./ChainMonitor";
 import { loadConfig } from "../../config/Loader";
 import { Dao } from "../store/Dao";
+import logger from "../log/logger";
 
 dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env") });
 
@@ -36,7 +37,7 @@ export class Monitor {
    */
   start = async (): Promise<void> => {
     await this.database.init();
-    console.info("Starting monitor for chains...", {
+    logger.info("Starting monitor for chains...", {
       numberOfChains: this.chainMonitors.length,
       chains: this.chainMonitors.map((cm) => cm.chain.chainId)
     });
@@ -50,9 +51,9 @@ export class Monitor {
    * Stops the monitor after executing all the pending requests.
    */
   shutdown = async (): Promise<void> => {
-    console.info("Shutting down monitor...");
+    logger.info("Shutting down monitor...");
     this.chainMonitors.forEach((cm) => cm.stop());
-    console.info("Succeed to stop monitor");
+    logger.info("Succeed to stop monitor");
   };
 }
 
@@ -60,9 +61,9 @@ if (require.main === module) {
   new Monitor()
     .start()
     .then(() => {
-      console.info("Succeed to start monitor");
+      logger.info("Succeed to start monitor");
     })
     .catch((error) => {
-      console.error("Failed to start monitor", error);
+      logger.warn("Failed to start monitor", error);
     });
 }

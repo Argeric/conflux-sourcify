@@ -1,5 +1,6 @@
 import { getReasonPhrase, StatusCodes } from "http-status-codes";
 import { Request, Response } from "express";
+import logger from "../../services/log/logger";
 
 export default function genericErrorHandler(
   err: any,
@@ -13,7 +14,7 @@ export default function genericErrorHandler(
     const errorCode =
       +err.statusCode || err.status || StatusCodes.INTERNAL_SERVER_ERROR;
     if (errorCode === StatusCodes.INTERNAL_SERVER_ERROR) {
-      console.error(`Unexpected server error: ${err.message}`, { error: err });
+      logger.error(`Unexpected server error: ${err.message}`, { error: err });
     }
 
     if (err.payload) {
@@ -34,7 +35,7 @@ export default function genericErrorHandler(
       message: err.message || getReasonPhrase(errorCode),
     });
   } catch (error) {
-    console.error("Error in genericErrorHandler", { error });
+    logger.error("Error in genericErrorHandler", { error });
     const errorCode = StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(errorCode).json({
       error: err.message || getReasonPhrase(errorCode),

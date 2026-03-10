@@ -1,5 +1,6 @@
 import { Chain } from "../chain/Chain";
 import { BaseSyncer } from "./BaseSyncer";
+import logger from "../log/logger";
 
 export class Syncer extends BaseSyncer {
   running: boolean;
@@ -21,7 +22,7 @@ export class Syncer extends BaseSyncer {
 
     async function repeat() {
       if (!that.running) {
-        console.log(`Chain monitor closed, chain ${that.chainId}`);
+        logger.info(`Chain monitor closed, chain ${that.chainId}`);
         return;
       }
 
@@ -63,7 +64,7 @@ export class Syncer extends BaseSyncer {
     await this.store(this.currentBlock, this.currentBlock, logs);
 
     if (this.currentBlock % 100 === 0) {
-      console.log(`Chain monitor synced block ${this.currentBlock}, chain ${this.chainId}`);
+      logger.info(`Chain monitor synced block ${this.currentBlock}, chain ${this.chainId}`);
     }
 
     this.currentBlock++;

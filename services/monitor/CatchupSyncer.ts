@@ -1,6 +1,7 @@
 import { Chain } from "../chain/Chain";
 import { BaseSyncer } from "./BaseSyncer";
 import { CONST } from "js-conflux-sdk";
+import logger from "../log/logger";
 
 export class CatchupSyncer extends BaseSyncer {
   private finalizedBlock!: number;
@@ -10,19 +11,19 @@ export class CatchupSyncer extends BaseSyncer {
   }
 
   async sync() {
-    console.info(`Catchup syncer starting to sync data, chain ${this.chainId}`);
+    logger.info(`Catchup syncer starting to sync data, chain ${this.chainId}`);
 
     for (; ;) {
       const needProcess = await this.tryBlockRange();
       if (!needProcess) {
-        console.info(`Catchup syncer done, chain ${this.chainId}`);
+        logger.info(`Catchup syncer done, chain ${this.chainId}`);
         return;
       }
 
       try {
         await this.syncRange(this.currentBlock, this.finalizedBlock);
       } catch (err) {
-        console.error("Catchup syncer sync range", {
+        logger.warn("Catchup syncer sync range", {
           "currentBlock": this.currentBlock,
           "finalizedBlock": this.finalizedBlock
         }, err);
@@ -36,7 +37,7 @@ export class CatchupSyncer extends BaseSyncer {
       try {
         await this.updateBlockRange();
       } catch (err) {
-        console.log("try block range", {
+        logger.info("try block range", {
           "try": i,
           "curBlk": this.currentBlock,
           "finalBlk": this.finalizedBlock

@@ -12,6 +12,7 @@ import { fetchFromConfluxscan } from "../../../services/utils/confluxscan-util";
 import { getChainId } from "../errors";
 import { ChainMap } from "../../../server";
 import _ from "lodash";
+import logger from "../../../services/log/logger";
 
 interface VerifyFromJsonInputRequest extends Request {
   params: {
@@ -37,7 +38,7 @@ export async function verifyFromJsonInputEndpoint(
   req: VerifyFromJsonInputRequest,
   res: VerifyResponse,
 ) {
-  console.debug("verifyFromJsonInputEndpoint", {
+  logger.debug("verifyFromJsonInputEndpoint", {
     chainId: req.params.chainId,
     address: req.params.address,
     stdJsonInput: req.body.stdJsonInput,
@@ -95,7 +96,7 @@ export async function verifyFromMetadataEndpoint(
   req: VerifyFromMetadataRequest,
   res: VerifyResponse,
 ) {
-  console.debug("verifyFromMetadataEndpoint", {
+  logger.debug("verifyFromMetadataEndpoint", {
     chainId: req.params.chainId,
     address: req.params.address,
     sources: req.body.sources,
@@ -132,7 +133,7 @@ export async function verifyFromConfluxscanEndpoint(
   req: VerifyFromConfluxscanRequest,
   res: VerifyResponse,
 ) {
-  console.debug("verifyFromConfluxscanEndpoint", {
+  logger.debug("verifyFromConfluxscanEndpoint", {
     chainId: req.params.chainId,
     address: req.params.address,
   });
@@ -174,7 +175,7 @@ export async function verifyFromCrossChainEndpoint(
   req: VerifyFromCrossChainRequest,
   res: VerifyResponse,
 ) {
-  console.debug("verifyFromCrossChainEndpoint", {
+  logger.debug("verifyFromCrossChainEndpoint", {
     chainId: req.params.chainId,
     address: req.params.address,
   });

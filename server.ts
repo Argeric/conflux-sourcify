@@ -94,7 +94,7 @@ export class Server {
         this.httpServer!.close((error?: Error) => {
           if (error) {
             // only thrown if it was not listening
-            logger.error("Error closing server", error);
+            logger.warn("Error closing server", error);
             resolve();
           } else {
             logger.info("Server closed");

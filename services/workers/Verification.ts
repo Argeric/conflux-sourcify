@@ -39,6 +39,7 @@ import {
   parseBlueprintPreamble,
 } from "../utils/erc5202-util";
 import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
+import logger from "../log/logger";
 
 export class Verification {
   // Bytecodes
@@ -103,7 +104,7 @@ export class Verification {
   async verify({
     forceEmscripten = false,
   }: { forceEmscripten?: boolean } = {}): Promise<void> {
-    console.info("Verifying contract", {
+    logger.info("Verifying contract", {
       address: this.address,
       chainId: this.chainId,
     });
@@ -227,13 +228,13 @@ export class Verification {
 
     // Try to match onchain runtime bytecode with compiled runtime bytecode
     try {
-      console.debug("Matching with runtime bytecode", {
+      logger.debug("Matching with runtime bytecode", {
         chain: this.chainId,
         address: this.address,
       });
       await this.matchWithRuntimeBytecode();
     } catch (e: any) {
-      console.warn("Error matching with runtime bytecode", {
+      logger.warn("Error matching with runtime bytecode", {
         chain: this.chainId,
         address: this.address,
         error: e.message,
@@ -263,7 +264,7 @@ export class Verification {
     // Try to match onchain creation bytecode with compiled creation bytecode
     if (this.creatorTxHash) {
       try {
-        console.debug("Matching with creation tx", {
+        logger.debug("Matching with creation tx", {
           chain: this.chainId,
           address: this.address,
           creatorTxHash: this.creatorTxHash,
@@ -286,7 +287,7 @@ export class Verification {
           this.txIndex = txReceipt.index;
         }
       } catch (e: any) {
-        console.warn("Error matching with creation tx", {
+        logger.warn("Error matching with creation tx", {
           chain: this.chainId,
           address: this.address,
           creatorTxHash: this.creatorTxHash,
@@ -298,7 +299,7 @@ export class Verification {
 
     // If we found the onchain creation bytecode, we try to match it with the compiled creation bytecode
     if (this._onchainCreationBytecode) {
-      console.debug('Matching with creation tx', {
+      logger.debug('Matching with creation tx', {
         chain: this.chainId,
         address: this.address,
         creatorTxHash: this.creatorTxHash,
@@ -306,7 +307,7 @@ export class Verification {
       try {
         await this.matchWithCreationTx();
       } catch (e: any) {
-        console.debug('Error matching with creation tx', {
+        logger.debug('Error matching with creation tx', {
           chain: this.chainId,
           address: this.address,
           creatorTxHash: this.creatorTxHash,
@@ -316,7 +317,7 @@ export class Verification {
     }
 
     if (this.creationMatch !== null || this.runtimeMatch !== null) {
-      console.info("Verified contract", {
+      logger.info("Verified contract", {
         address: this.address,
         chainId: this.chainId,
         runtimeMatch: this.runtimeMatch,
@@ -407,7 +408,7 @@ export class Verification {
       !settings.optimizer?.enabled &&
       settings.viaIR
     ) {
-      console.info("Force Emscripten compiler", {
+      logger.info("Force Emscripten compiler", {
         address: this.address,
         chainId: this.chainId,
       });
@@ -534,7 +535,7 @@ export class Verification {
         doBlueprintBytecodesMatch = parsedInitCode.equals(initCode);
       } catch (e) {
         if (e instanceof Error) {
-          console.log(`Check blueprint deployment.`, e.message);
+          logger.info(`Check blueprint deployment.`, e.message);
         } else {
           throw e;
         }

@@ -161,7 +161,7 @@ export async function getContractEndpoint(
           errorId: uuidv4(),
         },
       };
-      logger.error("Error detecting and resolving proxy", {
+      logger.warn("Error detecting and resolving proxy", {
         chainId: req.params.chainId,
         address: req.params.address,
         error,

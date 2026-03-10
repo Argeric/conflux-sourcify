@@ -17,6 +17,7 @@ import type {
   VyperJsonInput,
 } from "@ethereum-sourcify/lib-sourcify";
 import { ChainMap } from "../../server";
+import logger from "../../services/log/logger";
 
 export function validateChainId(
   req: Request,
@@ -26,7 +27,7 @@ export function validateChainId(
   const chainMap = req.app.get("chains") as ChainMap;
   const keys = new Set(Object.keys(chainMap));
   if (!keys.has(req.params.chainId) || !chainMap[req.params.chainId]) {
-    console.info("Invalid chainId in params", {
+    logger.info("Invalid chainId in params", {
       params: req.params,
     });
     throw new ChainNotFoundError(`Chain ${req.params.chainId} not found`);
@@ -43,7 +44,7 @@ export function validateAddress(
     // Checksum the address
     req.params.address = getAddress(req.params.address);
   } catch (err: any) {
-    console.info("Invalid address in params", {
+    logger.info("Invalid address in params", {
       errorMessage: err.message,
       errorStack: err.stack,
       params: req.params,
@@ -253,7 +254,7 @@ export async function checkIfJobIsAlreadyRunning(
         services.verification.isRunning(job.verificationId),
     )
   ) {
-    console.warn("Contract already being verified", { chainId, address });
+    logger.warn("Contract already being verified", { chainId, address });
     throw new DuplicateVerificationRequestError(
       `Contract ${address} on chain ${chainId} is already being verified`,
     );

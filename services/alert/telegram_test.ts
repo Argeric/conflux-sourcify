@@ -52,7 +52,7 @@ async function example() {
 
   try {
     await channel.send(notification);
-    console.log("Succeed to send");
+    console.info("Succeed to send");
   } catch (error) {
     console.error("Failed to send:", error);
   }

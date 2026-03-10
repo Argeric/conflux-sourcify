@@ -6,6 +6,7 @@ import { Tables } from "../store/Tables";
 import KV = Tables.KV;
 import AbiInfo = Tables.AbiInfo;
 import { format } from "js-conflux-sdk";
+import logger from "../log/logger";
 
 export class BaseSyncer {
   TOPICS = [
@@ -50,7 +51,7 @@ export class BaseSyncer {
     const len = list.length;
     if (len) {
       await AbiInfo.bulkCreate(list, { updateOnDuplicate: ["full_format", "updatedAt"] });
-      console.log(`Stored abi ${len}, block ${fromBlock} ${endBlock}, chain ${this.chainId}`);
+      logger.info(`Stored abi ${len}, block ${fromBlock} ${endBlock}, chain ${this.chainId}`);
     }
 
     await KV.saveNumber(this.KEY_SYNC_BLOCK_NUM, endBlock);

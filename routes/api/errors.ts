@@ -5,8 +5,6 @@ import {
   ConflictError,
 } from "../../common/errors";
 import { v4 as uuidv4 } from "uuid";
-import type { Request, Response, NextFunction } from "express";
-import { error as openApiValidatorErrors } from "express-openapi-validator";
 import {
   getErrorMessageFromCode,
   SourcifyLibErrorCode,
@@ -185,32 +183,6 @@ export class MalformedConfluxscanResponseError extends BadRequestError {
       errorId: uuidv4(),
     };
   }
-}
-
-// Maps OpenApiValidator errors to our custom error format
-export function errorHandler(
-  err: any,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  // Let errors pass that already match the v2 error format
-  if (err.payload) {
-    next(err);
-    return;
-  }
-
-  if (
-    err instanceof openApiValidatorErrors.BadRequest ||
-    err instanceof openApiValidatorErrors.RequestEntityTooLarge ||
-    err instanceof openApiValidatorErrors.UnsupportedMediaType
-  ) {
-    next(new InvalidParametersError(err.message));
-    return;
-  }
-
-  console.error("API v2 internal error: ", { error: err });
-  next(new InternalError("The server encountered an unexpected error."));
 }
 
 export type VerificationErrorCode =
