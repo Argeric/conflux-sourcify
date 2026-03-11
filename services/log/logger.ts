@@ -22,8 +22,8 @@ const validLogLevels = Object.values(LogLevels);
 
 const rawLineFormat = format.printf(
   ({ level, message, timestamp, service, traceId, ...metadata }: any) => {
-    const traceIdMsg = traceId ? chalk.grey(`[traceId=${traceId}]`) : "";
-    let msg = `${timestamp} [${level}] ${service ? service : ""} ${chalk.bold(message)}`;
+    const traceIdMsg = traceId ? (isDev() ? chalk.grey(`[traceId=${traceId}]`) : `[traceId=${traceId}]`) : "";
+    let msg = `${timestamp} [${level}] ${service ? service : ""}${isDev() ? chalk.bold(message) : message}`;
     if (metadata && Object.keys(metadata).length > 0) {
       msg += " - ";
       const metadataMsg = Object.entries(metadata)
@@ -38,7 +38,7 @@ const rawLineFormat = format.printf(
           return `${key}=${value}`;
         })
         .join(" | ");
-      msg += chalk.grey(metadataMsg);
+      msg += isDev() ? chalk.grey(metadataMsg) : metadataMsg;
       msg += traceIdMsg && " - " + traceIdMsg;
     }
     return msg;
@@ -77,7 +77,7 @@ const lineFormat = format.combine(
 
 const consoleTransport = new transports.Console({
   // NODE_LOG_LEVEL is takes precedence, otherwise use "info" if in production, "debug" otherwise
-  format: process.env.NODE_ENV === "production" ? jsonFormat : lineFormat
+  format: process.env.NODE_LOG_FORMAT === "json" ? jsonFormat : lineFormat
 });
 
 const hookTransport = new HookTransport({
@@ -93,12 +93,13 @@ const loggerInstance: Logger = createLogger({
 });
 
 const serverLoggerInstance = loggerInstance.child({
-  service:
-    process.env.NODE_ENV === "production"
-      ? "server"
-      : chalk.magenta("[Server]")
+  service: isDev() ? chalk.magenta("[dev] ") : ""
 });
 export default serverLoggerInstance;
+
+function isDev(): boolean {
+  return process.env.NODE_ENV === "dev";
+}
 
 const logLevelStringToNumber = (level: string): number => {
   switch (level) {
