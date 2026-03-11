@@ -3,7 +3,7 @@ import path from "path";
 import { Chain } from "../chain/Chain";
 import { ChainMap } from "../../server";
 import { ChainMonitor } from "./ChainMonitor";
-import { loadConfig } from "../../config/Loader";
+import { ConfigInstance, loadConfig } from "../../config/Loader";
 import { Dao } from "../store/Dao";
 import logger from "../log/logger";
 
@@ -15,10 +15,10 @@ export class Monitor {
   private readonly chainMonitors: ChainMonitor[];
 
   constructor() {
-    const config = loadConfig();
-    this.database = new Dao(config.mysql);
+    loadConfig();
+    this.database = new Dao(ConfigInstance.mysql);
     this.chains = Object.fromEntries(
-      Object.values(config.chains)
+      Object.values(ConfigInstance.chains)
         .filter(chain => Boolean(chain.announcement))
         .map(chain => [chain.chainId, new Chain(chain)])
     );

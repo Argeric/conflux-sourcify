@@ -15,7 +15,7 @@ import {
   TransactionResponse,
   TransactionResponseParams
 } from "ethers";
-import { Conflux, CONST, format, Transaction } from "js-conflux-sdk";
+import { Conflux, format, Transaction } from "js-conflux-sdk";
 import cfxFormat from "js-conflux-sdk/dist/types/rpc/types/formatter";
 import logger from "../log/logger";
 
@@ -105,7 +105,7 @@ export class Chain extends SourcifyChain {
       ]);
 
       if (!tx) {
-        logger.warn("Failed to fetch tx", {
+        logger.debug("Failed to fetch tx", {
           creatorTxHash,
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -115,7 +115,7 @@ export class Chain extends SourcifyChain {
       }
 
       if (!tx.blockHash || tx.transactionIndex == null) {
-        logger.warn("Failed to fetch tx", {
+        logger.debug("Failed to fetch tx", {
           creatorTxHash,
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -126,7 +126,7 @@ export class Chain extends SourcifyChain {
 
       const block = await this.getBlockByHash(tx.blockHash);
       if (block.epochNumber === undefined) {
-        logger.warn("Failed to fetch block", {
+        logger.debug("Failed to fetch block", {
           blockHash: tx.blockHash,
           creatorTxHash,
           providerUrl: sdk.provider.url,
@@ -188,7 +188,7 @@ export class Chain extends SourcifyChain {
       ]);
 
       if (!rcpt) {
-        logger.warn("Failed to fetch tx receipt", {
+        logger.debug("Failed to fetch tx receipt", {
           creatorTxHash,
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -271,7 +271,7 @@ export class Chain extends SourcifyChain {
         return bytecode;
       } catch (err) {
         if (err instanceof Error) {
-          logger.warn("Failed to fetch bytecode", {
+          logger.debug("Failed to fetch bytecode", {
             address,
             epochNumber,
             providerUrl: sdk.provider.url,
@@ -480,7 +480,7 @@ export class Chain extends SourcifyChain {
         });
         return block;
       } catch (err: any) {
-        logger.warn("Failed to fetch the block", {
+        logger.debug("Failed to fetch the block", {
           blockHash,
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -489,7 +489,7 @@ export class Chain extends SourcifyChain {
       }
     }
 
-    logger.warn("None of the RPCs responded for fetching block", {
+    logger.debug("None of the RPCs responded for fetching block", {
       blockHash,
       providers: this.providers.map((p) => p.url),
       chainId: this.chainId
@@ -521,7 +521,7 @@ export class Chain extends SourcifyChain {
         return epoch;
       } catch (err) {
         if (err instanceof Error) {
-          logger.warn("Failed to fetch cfx_epochNumber", {
+          logger.debug("Failed to fetch cfx_epochNumber", {
             providerUrl: sdk.provider.url,
             chainId: this.chainId,
             error: err.message
@@ -589,7 +589,7 @@ export class Chain extends SourcifyChain {
           }
         }
       } catch (err: any) {
-        logger.warn("Failed to fetch the epoch", {
+        logger.debug("Failed to fetch the epoch", {
           epochNumber,
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -598,7 +598,7 @@ export class Chain extends SourcifyChain {
       }
     }
 
-    logger.warn("None of the RPCs responded for fetching epoch", {
+    logger.debug("None of the RPCs responded for fetching epoch", {
       epochNumber,
       providers: this.providers.map((p) => p.url),
       chainId: this.chainId
@@ -738,6 +738,7 @@ export class Chain extends SourcifyChain {
   };
 
   getBlockByTag = async (tag: string): Promise<number> => {
+    const errs = [];
     if (!this.corespace) {
       for (const provider of this.providers) {
         try {
@@ -749,7 +750,8 @@ export class Chain extends SourcifyChain {
             return block.number;
           }
         } catch (err: any) {
-          logger.warn("Failed to fetch the block by tag", {
+          errs.push(`${err.message} ${provider.url}`);
+          logger.debug("Failed to fetch block", {
             providerUrl: provider.url,
             chainId: this.chainId,
             error: err.message
@@ -758,18 +760,20 @@ export class Chain extends SourcifyChain {
       }
 
       throw new Error(
-        `None of the RPCs responded fetching block by tag on chain ${this.chainId}`
+        `Failed to fetch block from chain ${this.chainId}\n${errs.join("\n")}`
       );
     }
 
     for (const sdk of this.confluxSdks) {
       try {
-        return Promise.race([
+        const epoch = await Promise.race([
           sdk.getEpochNumber(tag),
           this.rejectInMs(sdk.provider.url)
         ]);
+        return epoch;
       } catch (err: any) {
-        logger.warn("Failed to fetch the block by tag", {
+        errs.push(`${err.message} ${sdk.provider.url}`);
+        logger.debug("Failed to fetch epoch", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
           error: err.message
@@ -778,7 +782,7 @@ export class Chain extends SourcifyChain {
     }
 
     throw new Error(
-      `None of the RPCs responded fetching block by tag on chain ${this.chainId}`
+      `Failed to fetch epoch from chain ${this.chainId}\n${errs.join("\n")}`
     );
   };
 
@@ -788,10 +792,11 @@ export class Chain extends SourcifyChain {
     address: string | string[],
     topics: string[]
   ): Promise<Log[] | cfxFormat.Log[]> => {
+    const errs = [];
     if (!this.corespace) {
       for (const provider of this.providers) {
         try {
-          return Promise.race([
+          const logs = await Promise.race([
             provider.getLogs({
               fromBlock,
               toBlock,
@@ -800,8 +805,10 @@ export class Chain extends SourcifyChain {
             }),
             this.rejectInMs(provider.url)
           ]);
+          return logs;
         } catch (err: any) {
-          logger.warn("Failed to fetch logs", {
+          errs.push(`${err.message} ${provider.url}`);
+          logger.debug("Failed to fetch logs", {
             providerUrl: provider.url,
             chainId: this.chainId,
             error: err.message
@@ -810,13 +817,13 @@ export class Chain extends SourcifyChain {
       }
 
       throw new Error(
-        `None of the RPCs responded fetching logs on chain ${this.chainId}`
+        `Failed to fetch logs from chain ${this.chainId}\n${errs.join("\n")}`
       );
     }
 
     for (const sdk of this.confluxSdks) {
       try {
-        return Promise.race([
+        const logs = await Promise.race([
           sdk.getLogs({
             fromEpoch: fromBlock,
             toEpoch: toBlock,
@@ -825,8 +832,10 @@ export class Chain extends SourcifyChain {
           }),
           this.rejectInMs(sdk.provider.url)
         ]);
+        return logs;
       } catch (err: any) {
-        logger.warn("Failed to fetch logs", {
+        errs.push(`${err.message} ${sdk.provider.url}`);
+        logger.debug("Failed to fetch logs", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
           error: err.message
@@ -835,7 +844,7 @@ export class Chain extends SourcifyChain {
     }
 
     throw new Error(
-      `None of the RPCs responded fetching logs on chain ${this.chainId}`
+      `Failed to fetch logs from chain ${this.chainId}\n${errs.join("\n")}`
     );
   };
 }
