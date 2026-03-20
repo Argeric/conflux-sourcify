@@ -6,14 +6,20 @@ import {
   FetchRequestRPC,
 } from "@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes";
 import { Conflux } from "js-conflux-sdk";
+import { AlertConfig } from "../services/alert/types";
+import { initAlertMgrFromConfig } from "../services/alert/manager";
+import { TimedCounterConfig } from "../services/health/timedCounter";
 
 export interface Config {
   server: ServerOptions;
   proxy: string;
   chains: { [chainId: number]: ChainInstance };
+  chainHealth: ChainHealth,
   solc: SolcOptions;
   vyper: VyperOptions;
   mysql: DatabaseOptions;
+  log: LoggingConfig;
+  alert: AlertConfig;
 }
 
 export type ChainInstance = SourcifyChainInstance & {
@@ -97,6 +103,24 @@ export interface SyncOptions {
   delayBlocksAgainstLatest?: number;
 }
 
+export interface LoggingConfig {
+  level: string;
+  alertHook?: AlertHookConfig;
+}
+
+export interface AlertHookConfig {
+  level: string; // Level is the minimum level at which alerts will be triggered.
+  channels: string[]; // Channels lists the alert notification channels to use.
+  async: boolean; // Async configures the behavior of the asynchronous worker for handling log alerts.
+}
+
+export interface ChainHealth {
+  health: TimedCounterConfig,
+  channels: string[], // Channels lists the alert notification channels to use.
+}
+
+export let ConfigInstance: Config;
+
 export function loadConfig(): Config {
   const config = defaultConfig as any as Config;
 
@@ -106,5 +130,8 @@ export function loadConfig(): Config {
     }
   }
 
+  initAlertMgrFromConfig(config.alert);
+
+  ConfigInstance = config;
   return config;
 }

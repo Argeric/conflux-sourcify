@@ -40,6 +40,7 @@ import {
 } from "../../routes/api/errors";
 import { VerifyErrorExport } from "../workers/workerTypes";
 import { DatabaseOptions } from "../../config/Loader";
+import logger from "../log/logger";
 
 const MAX_RETURNED_CONTRACTS_BY_GETCONTRACTS = 200;
 
@@ -115,7 +116,7 @@ export class StoreService extends StoreBase implements RWStorageService {
       fullTotal > MAX_RETURNED_CONTRACTS_BY_GETCONTRACTS ||
       partialTotal > MAX_RETURNED_CONTRACTS_BY_GETCONTRACTS
     ) {
-      console.info(
+      logger.info(
         "Requested more than MAX_RETURNED_CONTRACTS_BY_GETCONTRACTS contracts",
         {
           maxReturnedContracts: MAX_RETURNED_CONTRACTS_BY_GETCONTRACTS,
@@ -812,7 +813,7 @@ export class StoreService extends StoreBase implements RWStorageService {
         license_type: licenseType,
         contract_label: contractLabel,
       });
-      console.info("Stored to SourcifyDatabase", matchInfo);
+      logger.info("Stored to SourcifyDatabase", matchInfo);
     } else if (type === "update") {
       if (!oldVerifiedContractId) {
         throw new Error(
@@ -831,7 +832,7 @@ export class StoreService extends StoreBase implements RWStorageService {
         oldVerifiedContractId,
       );
       if (effectRows) {
-        console.info("Updated in SourcifyDatabase", matchInfo);
+        logger.info("Updated in SourcifyDatabase", matchInfo);
       } else {
         await this.database.insertSourcifyMatch({
           verified_contract_id: verifiedContractId,
@@ -841,7 +842,7 @@ export class StoreService extends StoreBase implements RWStorageService {
           license_type: licenseType,
           contract_label: contractLabel,
         });
-        console.info("Stored to SourcifyDatabase", matchInfo);
+        logger.info("Stored to SourcifyDatabase", matchInfo);
       }
     } else {
       throw new Error(

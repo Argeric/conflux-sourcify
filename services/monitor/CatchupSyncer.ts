@@ -1,6 +1,7 @@
 import { Chain } from "../chain/Chain";
 import { BaseSyncer } from "./BaseSyncer";
-import { CONST } from "js-conflux-sdk";
+import logger from "../log/logger";
+import { alertError } from "../utils/alert";
 
 export class CatchupSyncer extends BaseSyncer {
   private finalizedBlock!: number;
@@ -10,22 +11,24 @@ export class CatchupSyncer extends BaseSyncer {
   }
 
   async sync() {
-    console.info(`Catchup syncer starting to sync data, chain ${this.chainId}`);
+    logger.info(`Catchup syncer starting to sync data, chain ${this.chainId}`);
 
     for (; ;) {
       const needProcess = await this.tryBlockRange();
       if (!needProcess) {
-        console.info(`Catchup syncer done, chain ${this.chainId}`);
+        logger.info(`Catchup syncer done, chain ${this.chainId}`);
         return;
       }
 
       try {
         await this.syncRange(this.currentBlock, this.finalizedBlock);
-      } catch (err) {
-        console.error("Catchup syncer sync range", {
+      } catch (err: any) {
+        logger.warn("Catchup syncer sync range", {
+          "chain": this.chainId,
           "currentBlock": this.currentBlock,
-          "finalizedBlock": this.finalizedBlock
-        }, err);
+          "finalizedBlock": this.finalizedBlock,
+          "error": err.message
+        });
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
@@ -36,10 +39,12 @@ export class CatchupSyncer extends BaseSyncer {
       try {
         await this.updateBlockRange();
       } catch (err) {
-        console.log("try block range", {
+        logger.warn("Try block range", {
           "try": i,
+          "chain": this.chainId,
           "curBlk": this.currentBlock,
-          "finalBlk": this.finalizedBlock
+          "finalBlk": this.finalizedBlock,
+          "error": err
         });
         await new Promise((resolve) => setTimeout(resolve, 1000));
         continue;
@@ -51,8 +56,18 @@ export class CatchupSyncer extends BaseSyncer {
 
   async updateBlockRange() {
     await this.loadLastSyncBlock();
+
+    let alertErr = null;
     const tag = this.chain.corespace ? "latest_finalized" : "finalized";
-    this.finalizedBlock = await this.chain.getBlockByTag(tag);
+
+    try {
+      this.finalizedBlock = await this.chain.getBlockByTag(tag);
+    } catch (err: any) {
+      alertErr = err;
+      throw err;
+    } finally {
+      await alertError("BlockchainRPCError", this.health, this.channels, alertErr);
+    }
   }
 
   async syncRange(rangeStart: number, rangeEnd: number) {
@@ -71,8 +86,8 @@ export class CatchupSyncer extends BaseSyncer {
         }
 
         [start, end] = this.nextSyncRange(end + 1, rangeEnd);
-      } catch (err) {
-        throw new Error(`Fail to sync range, ${err}`);
+      } catch (err: any) {
+        throw new Error(`Fail to sync range, ${err.message}`);
       }
     }
   }
@@ -108,7 +123,6 @@ export class CatchupSyncer extends BaseSyncer {
         };
       } catch (err: any) {
         const msg = `${err}`;
-
         if (
           msg.includes("larger than max_gap") || // conflux full node
           msg.includes("please narrow down your filter condition") || // conflux confura
@@ -120,12 +134,11 @@ export class CatchupSyncer extends BaseSyncer {
             const [, suggestEnd] = this.findClosedInterval(msg);
             end = suggestEnd;
           } catch {
-            end = start + (end - start) / 2;
+            end = start + Math.floor((end - start) / 2);
           }
           continue;
         }
-
-        throw new Error(`Failed to batch get logs with best effort, ${err}`);
+        throw new Error(`Failed to batch get logs with best effort, ${err.message}`);
       }
     }
   }

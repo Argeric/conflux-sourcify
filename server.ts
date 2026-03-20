@@ -7,12 +7,13 @@ import routes from "./routes/routes";
 import genericErrorHandler from "./common/errors/GenericErrorHandler";
 import { Services } from "./services/services";
 import { VerificationOptions } from "./services/verification/VerificationService";
-import { DatabaseOptions, loadConfig } from "./config/Loader";
+import { DatabaseOptions, loadConfig, LoggingConfig } from "./config/Loader";
 import { SolcLocal } from "./services/compiler/SolcLocal";
 import { Chain } from "./services/chain/Chain";
 import { heapDump } from "./services/utils/profile-util";
 import { enableHttpProxy } from "./services/utils/util";
 import fileUpload from "express-fileupload";
+import logger, { setLogLevel } from "./services/log/logger";
 
 export type ChainMap = {
   [chainId: string]: Chain;
@@ -24,6 +25,7 @@ export interface ServerOptions {
   chains: ChainMap;
   solc: ISolidityCompiler;
   enableProfile: boolean;
+  log?: LoggingConfig;
 }
 
 export class Server {
@@ -39,6 +41,8 @@ export class Server {
     verificationOptions: VerificationOptions,
     databaseOptions: DatabaseOptions,
   ) {
+    setLogLevel(options.log || {level: "info"});
+
     this.app = express();
     this.port = options.port;
     this.enableProfile = options.enableProfile;
@@ -84,16 +88,16 @@ export class Server {
   }
 
   async shutdown() {
-    console.info("Shutting down server");
+    logger.info("Shutting down server");
     if (this.httpServer) {
       await new Promise<void>((resolve) => {
         this.httpServer!.close((error?: Error) => {
           if (error) {
             // only thrown if it was not listening
-            console.error("Error closing server", error);
+            logger.warn("Error closing server", error);
             resolve();
           } else {
-            console.info("Server closed");
+            logger.info("Server closed");
             resolve();
           }
         });
@@ -101,7 +105,7 @@ export class Server {
     }
     // Gracefully closing all in-process verifications
     await this.services.close();
-    console.info("Services closed");
+    logger.info("Services closed");
   }
 }
 
@@ -122,6 +126,7 @@ if (require.main === module) {
       enableProfile: config.server.enableProfile,
       chains: chainMap,
       solc,
+      log: config.log,
     },
     {
       chains: chainMap,
@@ -136,9 +141,7 @@ if (require.main === module) {
 
   server.services.init().then(() => {
     server
-      .listen(() => {
-        console.info(`Server listening on ${server.port}`);
-      })
+      .listen(() => logger.info(`Server listening on ${server.port}`))
       .then();
     if (server.enableProfile) {
       const fileName = path.basename(__filename);

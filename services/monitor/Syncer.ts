@@ -1,5 +1,7 @@
 import { Chain } from "../chain/Chain";
 import { BaseSyncer } from "./BaseSyncer";
+import logger from "../log/logger";
+import { alertError } from "../utils/alert";
 
 export class Syncer extends BaseSyncer {
   running: boolean;
@@ -7,6 +9,7 @@ export class Syncer extends BaseSyncer {
   private readonly intervalAdjustStep: number = 500;
   private readonly intervalUpperLimit: number = 3000;
   private readonly intervalLowerLimit: number = 0;
+  private latestBlock!: number;
 
   constructor(chain: Chain) {
     super(chain);
@@ -21,7 +24,7 @@ export class Syncer extends BaseSyncer {
 
     async function repeat() {
       if (!that.running) {
-        console.log(`Chain monitor closed, chain ${that.chainId}`);
+        logger.info(`Chain monitor closed, chain ${that.chainId}`);
         return;
       }
 
@@ -43,8 +46,23 @@ export class Syncer extends BaseSyncer {
   }
 
   async syncOnce(): Promise<SyncResult> {
+    let latestBlock;
+    let alertErr = null;
     const tag = this.chain.corespace ? "latest_state" : "latest";
-    const latestBlock = await this.chain.getBlockByTag(tag);
+
+    try {
+      latestBlock = await this.chain.getBlockByTag(tag);
+      alertErr = (this.latestBlock && latestBlock <= this.latestBlock) ?
+        new Error(`Blockchain(${this.chainId}) stuck at ${latestBlock}`) :
+        null;
+    } catch (err: any) {
+      alertErr = err;
+      throw err;
+    } finally {
+      await alertError("BlockchainRPCError", this.health, this.channels, alertErr);
+    }
+    this.latestBlock = latestBlock;
+
     const delayBlocks = this.chain?.syncOptions?.delayBlocksAgainstLatest || 0;
     if (this.currentBlock > latestBlock - delayBlocks) {
       return "wait";
@@ -63,7 +81,7 @@ export class Syncer extends BaseSyncer {
     await this.store(this.currentBlock, this.currentBlock, logs);
 
     if (this.currentBlock % 100 === 0) {
-      console.log(`Chain monitor synced block ${this.currentBlock}, chain ${this.chainId}`);
+      logger.info(`Chain monitor synced block ${this.currentBlock}, chain ${this.chainId}`);
     }
 
     this.currentBlock++;

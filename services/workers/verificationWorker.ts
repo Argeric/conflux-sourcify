@@ -32,6 +32,7 @@ import { SolidityCompilation } from "../compilation/SolidityCompilation";
 import { VyperCompilation } from "../compilation/VyperCompilation";
 import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
 import { useAllSourcesAndReturnCompilation } from "../validation/processFiles";
+import logger from "../log/logger";
 
 export const filename = resolve(__filename);
 
@@ -206,7 +207,7 @@ async function _verifyFromMetadata({
         errorExport: createErrorExport(error, verification),
       };
     }
-    console.info("Found extra-file-input-bug", {
+    logger.info("Found extra-file-input-bug", {
       contract: metadataContract.name,
       chainId,
       address,

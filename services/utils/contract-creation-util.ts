@@ -4,6 +4,7 @@ import { Chain } from "../chain/Chain";
 import { format } from "js-conflux-sdk";
 import axios, { HttpStatusCode } from "axios";
 import { ConfluxscanRequestFailedError } from "../../routes/api/errors";
+import logger from "../log/logger";
 
 const CONFLUXSCAN_REGEX = ["at txn.*href=.*/tx/(0x.{64})"]; // save as string to be able to return the txRegex in /chains response. If stored as RegExp returns {}
 const CONFLUXSCAN_SUFFIX = "address/${ADDRESS}";
@@ -52,7 +53,7 @@ async function getCreatorTxUsingFetcher(
     contractAddress,
   );
 
-  console.debug("Fetching Creator Tx", {
+  logger.debug("Fetching Creator Tx", {
     contractFetchAddressFilled,
   });
 
@@ -67,7 +68,7 @@ async function getCreatorTxUsingFetcher(
             fetcher?.scrapeRegex,
           );
           if (creatorTx) {
-            console.debug("Fetched and found creator Tx", {
+            logger.debug("Fetched and found creator Tx", {
               contractFetchAddressFilled,
               creatorTx,
             });
@@ -80,7 +81,7 @@ async function getCreatorTxUsingFetcher(
         if (fetcher?.responseParser) {
           const response = await fetchFromApi(contractFetchAddressFilled);
           const creatorTx = fetcher?.responseParser(response);
-          console.debug("Fetched Creator Tx", {
+          logger.debug("Fetched Creator Tx", {
             contractFetchAddressFilled,
             creatorTx,
           });
@@ -92,7 +93,7 @@ async function getCreatorTxUsingFetcher(
       }
     }
   } catch (e: any) {
-    console.warn("Error while getting creation transaction", {
+    logger.warn("Error while getting creation transaction", {
       error: e.message,
     });
     return null;
@@ -123,7 +124,7 @@ async function getCreatorTxByScraping(
         return txHash;
       } else {
         if (page.includes("captcha") || page.includes("CAPTCHA")) {
-          console.warn("Scraping the creator tx failed because of CAPTCHA", {
+          logger.warn("Scraping the creator tx failed because of CAPTCHA", {
             fetchAddress,
           });
           throw new Error(
@@ -134,7 +135,7 @@ async function getCreatorTxByScraping(
     }
   }
   if (res.status === StatusCodes.FORBIDDEN) {
-    console.warn("Scraping the creator tx failed", {
+    logger.warn("Scraping the creator tx failed", {
       fetchAddress,
       status: res.status,
     });
@@ -145,7 +146,7 @@ async function getCreatorTxByScraping(
     );
   }
 
-  console.debug("Could not find creator tx via scraping", {
+  logger.debug("Could not find creator tx via scraping", {
     fetchAddress,
     status: res.status,
   });
@@ -213,7 +214,7 @@ export const getCreatorTx = async (
   }
 
   // Try binary search as last resort
-  console.debug("Trying binary search to find contract creation transaction", {
+  logger.debug("Trying binary search to find contract creation transaction", {
     contractAddress,
   });
   const result = await findContractCreationTxByBinarySearch(
@@ -224,7 +225,7 @@ export const getCreatorTx = async (
     return result;
   }
 
-  console.warn("Couldn't fetch creator tx", {
+  logger.warn("Couldn't fetch creator tx", {
     chainId: chain.chainId,
     contractAddress,
   });
@@ -249,7 +250,7 @@ export async function findContractCreationTxByBinarySearch(
     let left = 0;
     let right = currentBlockNumber;
 
-    console.debug("Starting binary search for contract creation block", {
+    logger.debug("Starting binary search for contract creation block", {
       chainId: chain.chainId,
       contractAddress,
       currentBlockNumber,
@@ -276,7 +277,7 @@ export async function findContractCreationTxByBinarySearch(
     // left is now the first block where the contract exists (creation block)
     const creationBlock = left;
 
-    console.debug("Found contract creation block", {
+    logger.debug("Found contract creation block", {
       chainId: chain.chainId,
       contractAddress,
       creationBlock,
@@ -286,7 +287,7 @@ export async function findContractCreationTxByBinarySearch(
     // Get all transactions in the creation block
     const block = await chain.getBlock(creationBlock, true);
     if (!block || !block.prefetchedTransactions) {
-      console.warn("Block empty or not found during binary search", {
+      logger.warn("Block empty or not found during binary search", {
         chainId: chain.chainId,
         contractAddress,
         creationBlock,
@@ -301,7 +302,7 @@ export async function findContractCreationTxByBinarySearch(
       // Skip if not a contract creation transaction
       if (tx.to !== null) continue;
 
-      console.debug("Found tx with tx.to===null", {
+      logger.debug("Found tx with tx.to===null", {
         contractAddress,
         chainId: chain.chainId,
         txHash: tx.hash,
@@ -316,7 +317,7 @@ export async function findContractCreationTxByBinarySearch(
           receipt?.contractAddress &&
           format.hexAddress(receipt.contractAddress) === normalizedAddress
         ) {
-          console.info(
+          logger.info(
             "Found contract creation transaction using binary search",
             {
               contractAddress,
@@ -331,7 +332,7 @@ export async function findContractCreationTxByBinarySearch(
         continue; // Skip if we can't get receipt
       }
     }
-    console.info("Could not find creation transaction with binary search", {
+    logger.info("Could not find creation transaction with binary search", {
       contractAddress,
       creationBlock,
       binarySearchCount,
@@ -339,7 +340,7 @@ export async function findContractCreationTxByBinarySearch(
     });
     return null;
   } catch (error: any) {
-    console.warn("Error in binary search for contract creation", {
+    logger.warn("Error in binary search for contract creation", {
       contractAddress,
       error: error.message,
     });

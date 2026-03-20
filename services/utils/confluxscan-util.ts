@@ -13,6 +13,7 @@ import {
 import SolidityParser from "@solidity-parser/parser";
 import { Chain } from "../chain/Chain";
 import axios, { HttpStatusCode } from "axios";
+import logger from "../log/logger";
 
 interface VyperVersion {
   compiler_version: string;
@@ -55,10 +56,10 @@ export const getVyperCompilerVersion = async (
         lastFetch: now,
       };
     } catch (error) {
-      console.error("Failed to fetch Vyper versions", { error });
+      logger.warn("Failed to fetch Vyper versions", { error });
       // If cache exists but is stale, use it rather than failing
       if (vyperVersionCache) {
-        console.warn("Using stale Vyper versions cache");
+        logger.warn("Using stale Vyper versions cache");
       } else {
         throw error;
       }
@@ -132,7 +133,7 @@ export const getSolcJsonInputFromConfluxscanResult = (
         : undefined,
     libraries: {}, // TODO: Check the library format
   };
-  console.log(
+  logger.log(
     "confluxscan-util: generated compiler setting from confluxscan result",
     generatedSettings,
   );
@@ -148,7 +149,7 @@ export const getContractPathFromSourcesOrThrow = (
   contractName: string,
   sources: Sources,
 ): string => {
-  console.debug(
+  logger.debug(
     "confluxscan-util: Parsing sources for finding the contract path",
     { contractName },
   );
@@ -167,13 +168,13 @@ export const getContractPathFromSourcesOrThrow = (
       });
     } catch (error) {
       // Just continue, because the relevant contract might be in a different source file.
-      console.warn(
+      logger.warn(
         "confluxscan-util: Error parsing source code. Ignoring this source.",
         { path, error },
       );
     }
   }
-  console.debug("confluxscan-util: Parsing for all sources done", {
+  logger.debug("confluxscan-util: Parsing for all sources done", {
     contractName,
     contractPath,
     timeInMs: Date.now() - startTime,
@@ -231,7 +232,7 @@ export const fetchFromConfluxscan = async (
     : `${chain.confluxscanApi.apiURL}/api?module=contract&action=getsourcecode&address=${address}`;
   const usedApiKey =
     apiKey || process.env[chain.confluxscanApi.apiKeyEnvName || ""];
-  console.debug("Fetching from Confluxscan", {
+  logger.debug("Fetching from Confluxscan", {
     url,
     chainId: chain.chainId,
     address,
@@ -253,14 +254,14 @@ export const fetchFromConfluxscan = async (
       `Request to ${url}&apiKey=XXX failed.`,
     );
   }
-  console.debug("Fetched from Confluxscan", {
+  logger.debug("Fetched from Confluxscan", {
     url,
     chainId: chain.chainId,
     address,
   });
 
   if (response.status !== HttpStatusCode.Ok) {
-    console.warn("Confluxscan API error", {
+    logger.warn("Confluxscan API error", {
       url,
       chainId: chain.chainId,
       address,
@@ -278,7 +279,7 @@ export const fetchFromConfluxscan = async (
     resultJson.message === "NOTOK" &&
     resultJson.result.includes("rate limit reached")
   ) {
-    console.info("Confluxscan Rate Limit", {
+    logger.info("Confluxscan Rate Limit", {
       url,
       chainId: chain.chainId,
       address,
@@ -290,7 +291,7 @@ export const fetchFromConfluxscan = async (
   }
 
   if (resultJson.message === "NOTOK") {
-    console.error("Confluxscan API error", {
+    logger.warn("Confluxscan API error", {
       url,
       chainId: chain.chainId,
       address,
@@ -302,7 +303,7 @@ export const fetchFromConfluxscan = async (
   }
 
   if (resultJson.result[0].SourceCode === "") {
-    console.info("Contract not found on Confluxscan", {
+    logger.info("Contract not found on Confluxscan", {
       url,
       chainId: chain.chainId,
       address,
@@ -331,7 +332,7 @@ export const processSolidityResultFromConfluxscan = (
   let contractPath: string | undefined;
   // SourceCode can be the Solidity code if there is only one contract file, or the json object if there are multiple files
   if (isConfluxscanJsonInput(sourceCodeObject)) {
-    console.debug("Confluxscan solcJsonInput contract found");
+    logger.debug("Confluxscan solcJsonInput contract found");
     solcJsonInput = parseConfluxscanJsonInput(sourceCodeObject);
     if (solcJsonInput?.settings) {
       // Tell compiler to output metadata and bytecode
@@ -345,7 +346,7 @@ export const processSolidityResultFromConfluxscan = (
       contractFileName ||
       getContractPathFromSourcesOrThrow(contractName, solcJsonInput.sources);
   } else if (isConfluxscanMultipleFilesObject(sourceCodeObject)) {
-    console.debug("Confluxscan Solidity multiple file contract found");
+    logger.debug("Confluxscan Solidity multiple file contract found");
     const sources = JSON.parse(sourceCodeObject) as Sources;
     solcJsonInput = getSolcJsonInputFromConfluxscanResult(
       contractResultJson,
@@ -353,7 +354,7 @@ export const processSolidityResultFromConfluxscan = (
     );
     contractPath = getContractPathFromSourcesOrThrow(contractName, sources);
   } else {
-    console.debug("Confluxscan Solidity single file contract found");
+    logger.debug("Confluxscan Solidity single file contract found");
     contractPath = contractResultJson.ContractName + ".sol";
     const sources = {
       [contractPath]: {
@@ -392,7 +393,7 @@ export const processVyperResultFromConfluxscan = async (
   let contractPath: string;
   let vyperJsonInput: VyperJsonInput;
   if (isConfluxscanJsonInput(sourceCodeProperty)) {
-    console.debug("Confluxscan vyperJsonInput contract found");
+    logger.debug("Confluxscan vyperJsonInput contract found");
 
     const parsedJsonInput = parseConfluxscanJsonInput(sourceCodeProperty);
 
@@ -421,7 +422,7 @@ export const processVyperResultFromConfluxscan = async (
       settings: parsedJsonInput.settings,
     };
   } else {
-    console.debug("Confluxscan Vyper single file contract found");
+    logger.debug("Confluxscan Vyper single file contract found");
 
     // Since the ContractName from Confluxscan is derived from the @title natspec, it can contain spaces.
     // To be safe we also remove \n and \r characters

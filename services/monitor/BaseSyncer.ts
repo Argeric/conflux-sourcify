@@ -6,6 +6,9 @@ import { Tables } from "../store/Tables";
 import KV = Tables.KV;
 import AbiInfo = Tables.AbiInfo;
 import { format } from "js-conflux-sdk";
+import logger from "../log/logger";
+import { TimedCounter } from "../health/timedCounter";
+import { ConfigInstance } from "../../config/Loader";
 
 export class BaseSyncer {
   TOPICS = [
@@ -17,11 +20,15 @@ export class BaseSyncer {
   protected currentBlock!: number;
   protected readonly KEY_SYNC_BLOCK_NUM: string;
   protected readonly announcement: string;
+  protected health: TimedCounter;
+  protected channels: string[];
 
   constructor(chain: Chain) {
     this.chain = chain;
     this.KEY_SYNC_BLOCK_NUM = `${Tables.KEY_SYNC_BLOCK_NUM}_${chain.chainId}`;
     this.announcement = format.hexAddress(chain.announcement);
+    this.health = new TimedCounter(ConfigInstance.chainHealth.health);
+    this.channels = ConfigInstance.chainHealth.channels;
   }
 
   async loadLastSyncBlock() {
@@ -50,7 +57,7 @@ export class BaseSyncer {
     const len = list.length;
     if (len) {
       await AbiInfo.bulkCreate(list, { updateOnDuplicate: ["full_format", "updatedAt"] });
-      console.log(`Stored abi ${len}, block ${fromBlock} ${endBlock}, chain ${this.chainId}`);
+      logger.info(`Stored abi ${len}, block ${fromBlock} ${endBlock}, chain ${this.chainId}`);
     }
 
     await KV.saveNumber(this.KEY_SYNC_BLOCK_NUM, endBlock);

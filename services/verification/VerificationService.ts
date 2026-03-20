@@ -31,6 +31,7 @@ import {
 } from "@ethereum-sourcify/compilers";
 import { keccak256 } from "ethers";
 import { matchBytesIgnoreCase, validABIEncoded } from "../utils/util";
+import logger from "../log/logger";
 
 export interface VerificationOptions {
   chains: ChainMap;
@@ -88,7 +89,7 @@ export class VerificationService {
 
     if (this.initCompilers) {
       const platform = findSolcPlatform() || "bin"; // fallback to emscripten binaries "bin"
-      console.info(`Initializing compilers for platform ${platform}`);
+      logger.info(`Initializing compilers for platform ${platform}`);
 
       // solc binary and solc-js downloads are handled with different helpers
       const downLoadFunc =
@@ -120,19 +121,19 @@ export class VerificationService {
         const promises = chunk.map((solcVer) => {
           const now = Date.now();
           return downLoadFunc(solcVer).then(() => {
-            console.debug(
+            logger.debug(
               `Downloaded (or found existing) compiler ${solcVer} in ${Date.now() - now}ms`,
             );
           });
         });
 
         await Promise.all(promises);
-        console.debug(
+        logger.debug(
           `Batch ${i / chunkSize + 1} - Downloaded ${promises.length} - Total ${i + chunkSize}/${solcList.length}`,
         );
       }
 
-      console.info("Initialized compilers");
+      logger.info("Initialized compilers");
     }
     return true;
   }
@@ -343,7 +344,7 @@ export class VerificationService {
             const expectValue =
               output.verificationExport.transformations?.creation.values
                 .constructorArguments || "";
-            console.log("Check constructor arguments", {
+            logger.info("Check constructor arguments", {
               address: output.verificationExport.address,
               chainId: output.verificationExport.chainId,
               constructorArguments,
@@ -362,7 +363,6 @@ export class VerificationService {
           throw new VerifyError(output.errorExport);
         }
         const errorMessage = `The worker did not return a verification export nor an error export. This should never happen.`;
-        console.error(errorMessage, { output });
         throw new Error(errorMessage);
       })
       .then((verification: VerificationExport) => {
@@ -380,7 +380,7 @@ export class VerificationService {
         let errorExport: VerifyErrorExport;
         if (error instanceof VerifyError) {
           // error comes from the verification worker
-          console.debug("Received verification error from worker", {
+          logger.debug("Received verification error from worker", {
             verificationId,
             errorExport: error.errorExport,
           });
@@ -392,7 +392,7 @@ export class VerificationService {
             errorId: uuidv4(),
           };
         } else {
-          console.error("Unexpected verification error", {
+          logger.error("Unexpected verification error", {
             verificationId,
             error,
           });

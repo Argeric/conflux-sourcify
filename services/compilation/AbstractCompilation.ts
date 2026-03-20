@@ -24,6 +24,7 @@ import {
   logSilly,
   logWarn,
 } from "@ethereum-sourcify/compilers/build/main/logger";
+import logger from "../log/logger";
 
 export abstract class AbstractCompilation {
   /**
@@ -114,7 +115,7 @@ export abstract class AbstractCompilation {
   ): Promise<{ path: string; name: string }[]> {
     const version = this.compilerVersion;
 
-    console.info("Compiling contract", { version, forceEmscripten });
+    logger.info("Compiling contract", { version, forceEmscripten });
     const compilationStartTime = Date.now();
     try {
       this.compilerOutput = await this.compiler.compile(
@@ -123,14 +124,14 @@ export abstract class AbstractCompilation {
         forceEmscripten,
       );
     } catch (e: any) {
-      console.warn("Compiler error", { error: e.message });
+      logger.warn("Compiler error", { error: e.message });
       throw new CompilationError({ code: "compiler_error" });
     }
 
     const contractFullQualifyNames = this.contractFullQualifyNames;
 
     this.compilationTime = Date.now() - compilationStartTime;
-    console.info("Compiled contract", {
+    logger.info("Compiled contract", {
       version,
       forceEmscripten,
       compilationDuration: `${this.compilationTime}ms`,
@@ -163,7 +164,7 @@ export abstract class AbstractCompilation {
 
   get contractFullQualifyNames(): { path: string; name: string }[] {
     if (!this.compilerOutput) {
-      console.warn("Compiler output is undefined");
+      logger.warn("Compiler output is undefined");
       throw new CompilationError({ code: "no_compiler_output" });
     }
 
@@ -171,7 +172,7 @@ export abstract class AbstractCompilation {
       !this.compilerOutput.contracts ||
       !Object.keys(this.compilerOutput.contracts).length
     ) {
-      console.warn("Contract not found in compiler output");
+      logger.warn("Contract not found in compiler output");
       throw new CompilationError({
         code: "contract_not_found_in_compiler_output",
       });
