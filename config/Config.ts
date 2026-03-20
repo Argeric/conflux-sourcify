@@ -183,32 +183,32 @@ export default {
       rpc: [`http://localhost:8545`],
     },
   },
-  chainHealth: {
-    health: {
-      threshold: 60 * 1000, // (ms) report unhealthy if threshold reached
-      remind: 5 * 60 * 1000, // (ms) remind unhealthy if unrecovered for a long time
-    },
-    channels: ["dingrobot"], // Notification channels
-  },
-  alert: {
-    customTags: ["uni-verif"],
-    channels: {
-      dingrobot: {
-        type: "dingtalk", // The type of the channel. In this case, it's 'dingtalk'
-        webhook: `https://oapi.dingtalk.com/robot/send?access_token=${process.env.DINGTALK_ACCESS_TOKEN}`, // The webhook URL for the DingTalk robot
-        secret: process.env.DINGTALK_ACCESS_SECRET, // The secret key for the DingTalk robot
-        msgType: "text", // Available message types are `text` and `markdown`
-        atMobiles: [], // List of mobile numbers to be mentioned in the alert. If empty, no one is mentioned
-        isAtAll: false // If set to true, all members are mentioned in the alert. If false, only the members in 'atMobiles' are mentioned
-      },
-      // tgrobot: {
-      //   type: "telegram", // The type of the channel. In this case, it's 'telegram'.
-      //   apiToken: process.env.TELEGRAM_API_TOKEN, // # The API token for the Telegram robot.
-      //   chatId: process.env.TELEGRAM_CHAT_ID, // # The chat ID for the Telegram chat where the alerts are sent.
-      //   atUsers: [] //# List of public usernames in the chat to be mentioned.
-      // }
-    }
-  },
+  // chainHealth: {
+  //   health: {
+  //     threshold: 60 * 1000, // (ms) report unhealthy if threshold reached
+  //     remind: 5 * 60 * 1000, // (ms) remind unhealthy if unrecovered for a long time
+  //   },
+  //   channels: ["dingrobot"], // Notification channels
+  // },
+  // alert: {
+  //   customTags: ["uni-verif"],
+  //   channels: {
+  //     dingrobot: {
+  //       type: "dingtalk", // The type of the channel. In this case, it's 'dingtalk'
+  //       webhook: `https://oapi.dingtalk.com/robot/send?access_token=${process.env.DINGTALK_ACCESS_TOKEN}`, // The webhook URL for the DingTalk robot
+  //       secret: process.env.DINGTALK_ACCESS_SECRET, // The secret key for the DingTalk robot
+  //       msgType: "text", // Available message types are `text` and `markdown`
+  //       atMobiles: [], // List of mobile numbers to be mentioned in the alert. If empty, no one is mentioned
+  //       isAtAll: false // If set to true, all members are mentioned in the alert. If false, only the members in 'atMobiles' are mentioned
+  //     },
+  //     tgrobot: {
+  //       type: "telegram", // The type of the channel. In this case, it's 'telegram'.
+  //       apiToken: process.env.TELEGRAM_API_TOKEN, // # The API token for the Telegram robot.
+  //       chatId: process.env.TELEGRAM_CHAT_ID, // # The chat ID for the Telegram chat where the alerts are sent.
+  //       atUsers: [] //# List of public usernames in the chat to be mentioned.
+  //     }
+  //   }
+  // },
   // log: {
   //   level: "info",
   //   alertHook: { // Alert hooking settings
