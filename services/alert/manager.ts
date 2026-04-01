@@ -2,6 +2,7 @@ import { AlertConfig, Channel, ChannelType, ChannelTypeNotSupportedError } from 
 import { createDingtalkMsgFormatter, DingTalkChannel, DingTalkConfig } from "./dingtalk";
 import { TelegramChannel, TelegramConfig } from "./telegram";
 import { TelegramMarkdownFormatter } from "./formatter/formatter";
+import logger from "../log/logger";
 
 let defaultManagerInstance: Manager | null = null;
 
@@ -54,13 +55,12 @@ export function initAlertMgrFromConfig(alertConfig: AlertConfig) {
   const config = alertConfig || {};
   const customTags = config.customTags || ["dev"];
 
-  if (!config.channels) {
-    console.warn("No channels configured in alert config");
-    return;
-  }
-
   for (const [chId, chConfig] of Object.entries(config.channels)) {
     try {
+      if (!chConfig.enable) {
+        continue;
+      }
+
       const channel = initAlertChannel(
         chId,
         chConfig,
@@ -69,12 +69,16 @@ export function initAlertMgrFromConfig(alertConfig: AlertConfig) {
 
       if (channel) {
         defaultManager().add(channel);
-        console.info(`Succeed to init alert channel ${chId}`);
+        logger.info("Succeed to init alert channel", { chId });
       }
     } catch (error) {
-      console.error(`Failed to parse alert channel "${chId}"`, error);
+      logger.error("Failed to parse alert channel", { chId, error });
       throw error;
     }
+  }
+
+  if (!defaultManager().size()) {
+    logger.warn("No channels configured in alert config");
   }
 }
 

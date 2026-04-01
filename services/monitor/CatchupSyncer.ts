@@ -8,6 +8,9 @@ export class CatchupSyncer extends BaseSyncer {
 
   constructor(chain: Chain) {
     super(chain);
+    if (!this.channels?.length) {
+      logger.warn("No channels configured in chainHealth config", { chain: this.chainId });
+    }
   }
 
   async sync() {
@@ -23,12 +26,12 @@ export class CatchupSyncer extends BaseSyncer {
       try {
         await this.syncRange(this.currentBlock, this.finalizedBlock);
       } catch (err: any) {
-        logger.warn("Catchup syncer sync range", {
-          "chain": this.chainId,
-          "currentBlock": this.currentBlock,
-          "finalizedBlock": this.finalizedBlock,
-          "error": err.message
-        });
+        /*logger.error("Failed to catchup data", {
+          chain: this.chainId,
+          currentBlock: this.currentBlock,
+          finalizedBlock: this.finalizedBlock,
+          error: err.message
+        });*/
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
@@ -39,13 +42,13 @@ export class CatchupSyncer extends BaseSyncer {
       try {
         await this.updateBlockRange();
       } catch (err) {
-        logger.warn("Try block range", {
-          "try": i,
-          "chain": this.chainId,
-          "curBlk": this.currentBlock,
-          "finalBlk": this.finalizedBlock,
-          "error": err
-        });
+        /*logger.error("Failed to get block range", {
+          chain: this.chainId,
+          currentBlock: this.currentBlock,
+          finalizedBlock: this.finalizedBlock,
+          try: i,
+          error: err
+        });*/
         await new Promise((resolve) => setTimeout(resolve, 1000));
         continue;
       }
@@ -66,7 +69,9 @@ export class CatchupSyncer extends BaseSyncer {
       alertErr = err;
       throw err;
     } finally {
-      await alertError("BlockchainRPCError", this.health, this.channels, alertErr);
+      if (this.channels) {
+        await alertError(`BlockchainRPCError (chain ${this.chainId})`, this.health, this.channels, alertErr);
+      }
     }
   }
 
@@ -74,21 +79,17 @@ export class CatchupSyncer extends BaseSyncer {
     let [start, end] = this.nextSyncRange(rangeStart, rangeEnd);
 
     for (; ;) {
-      try {
-        const result = await this.batchGetLogsBestEffort(start, end,
-          [this.chain.announcement], this.TOPICS);
-        end = result.end;
+      const result = await this.batchGetLogsBestEffort(start, end,
+        [this.chain.announcement], this.TOPICS);
+      end = result.end;
 
-        await this.store(start, end, result.logs);
+      await this.store(start, end, result.logs);
 
-        if (end >= rangeEnd) {
-          break;
-        }
-
-        [start, end] = this.nextSyncRange(end + 1, rangeEnd);
-      } catch (err: any) {
-        throw new Error(`Fail to sync range, ${err.message}`);
+      if (end >= rangeEnd) {
+        break;
       }
+
+      [start, end] = this.nextSyncRange(end + 1, rangeEnd);
     }
   }
 
@@ -114,6 +115,7 @@ export class CatchupSyncer extends BaseSyncer {
     let end = bnTo;
 
     for (; ;) {
+      let alertErr = null;
       try {
         const logs: any[] = await this.chain.getLogs(start, end, address, topics);
         return {
@@ -138,7 +140,12 @@ export class CatchupSyncer extends BaseSyncer {
           }
           continue;
         }
-        throw new Error(`Failed to batch get logs with best effort, ${err.message}`);
+        alertErr = err;
+        throw err;
+      } finally {
+        if (this.channels) {
+          await alertError(`BlockchainRPCError (chain ${this.chainId})`, this.health, this.channels, alertErr);
+        }
       }
     }
   }

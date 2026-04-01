@@ -15,6 +15,7 @@ export interface Channel {
 }
 
 export interface ChannelConfig {
+  enable?: boolean;
   type: ChannelType;
 }
 

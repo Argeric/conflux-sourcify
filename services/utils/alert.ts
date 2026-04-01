@@ -15,9 +15,9 @@ export class AlertContent {
 
   toString(): string {
     if (!this.url) {
-      return `---\nReason: ${this.reason}\nElapsed: ${this.formatTime(this.elapsed)}`;
+      return `---\n\nReason: ${this.reason}\n\nElapsed: ${this.formatTime(this.elapsed)}`;
     }
-    return `---\nReason: ${this.reason}\nURL: ${this.url}\nElapsed: ${this.formatTime(this.elapsed)}`;
+    return `---\n\nReason: ${this.reason}\n\nURL: ${this.url}\n\nElapsed: ${this.formatTime(this.elapsed)}`;
   }
 
   formatTime(milliseconds: number, decimalPlaces: number = 3): string {
@@ -43,7 +43,6 @@ export async function alertError(
   ...urls: string[]
 ) {
   const errs = [];
-
   for (const channel of channels) {
     try {
       const ch = defaultManager().channel(channel);

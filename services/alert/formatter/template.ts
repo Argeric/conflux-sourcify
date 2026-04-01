@@ -55,7 +55,8 @@ export const dingTalkMarkdownTemplates = [
 - **Severity**: {{severity}}
 - **Time**: {{time}}
 
-**{{content}}**
+{{content}}
+
 {{#each (mentions)}}@{{this}}{{/each}}
 `,
 `
@@ -85,6 +86,7 @@ export const dingTalkMarkdownTemplates = [
 - **{{@key}}**: {{this}}
 {{/each}}
 {{/if}}
+
 {{#each (mentions)}}@{{this}}{{/each}}
 `
 ];
