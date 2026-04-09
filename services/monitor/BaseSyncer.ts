@@ -27,8 +27,9 @@ export class BaseSyncer {
     this.chain = chain;
     this.KEY_SYNC_BLOCK_NUM = `${Tables.KEY_SYNC_BLOCK_NUM}_${chain.chainId}`;
     this.announcement = format.hexAddress(chain.announcement);
-    this.health = new TimedCounter(ConfigInstance.chainHealth.health);
-    this.channels = ConfigInstance.chainHealth.channels;
+    const health = ConfigInstance.chainHealth;
+    this.health = new TimedCounter(health?.health);
+    this.channels = health?.channels;
   }
 
   async loadLastSyncBlock() {

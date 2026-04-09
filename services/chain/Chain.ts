@@ -84,7 +84,7 @@ export class Chain extends SourcifyChain {
       traceSupportedRPCs: this.traceSupportedRPCs,
       corespace: this.corespace,
       announcement: this.announcement,
-      sync: this.syncOptions,
+      sync: this.syncOptions
     };
   };
 
@@ -95,50 +95,43 @@ export class Chain extends SourcifyChain {
     }
 
     for (const sdk of this.confluxSdks) {
-      logger.info("Fetching tx", {
-        creatorTxHash,
-        providerUrl: sdk.provider.url
-      });
       const tx = await Promise.race([
         sdk.getTransactionByHash(creatorTxHash),
         this.rejectInMs(sdk.provider.url)
       ]);
 
       if (!tx) {
-        logger.debug("Failed to fetch tx", {
-          creatorTxHash,
+        logger.debug("Failed to fetch tx, not found", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
-          error: `Transaction ${creatorTxHash} not found on RPC ${sdk.provider.url} and chain ${this.chainId}`
+          creatorTxHash
         });
         continue;
       }
 
       if (!tx.blockHash || tx.transactionIndex == null) {
-        logger.debug("Failed to fetch tx", {
-          creatorTxHash,
+        logger.debug("Failed to fetch tx, pending", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
-          error: `Transaction ${creatorTxHash} is pending on RPC ${sdk.provider.url} and chain ${this.chainId}`
+          creatorTxHash
         });
         continue;
       }
 
       const block = await this.getBlockByHash(tx.blockHash);
       if (block.epochNumber === undefined) {
-        logger.debug("Failed to fetch block", {
-          blockHash: tx.blockHash,
-          creatorTxHash,
+        logger.debug("Failed to fetch block, pending", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
-          error: `Transaction ${creatorTxHash} is pending on RPC ${sdk.provider.url} and chain ${this.chainId}`
+          blockHash: tx.blockHash
         });
         continue;
       }
 
-      logger.info("Fetched tx", {
-        creatorTxHash,
-        providerUrl: sdk.provider.url
+      logger.debug("Succeed to fetch tx", {
+        providerUrl: sdk.provider.url,
+        chainId: this.chainId,
+        creatorTxHash
       });
 
       return new TransactionResponse(
@@ -188,20 +181,19 @@ export class Chain extends SourcifyChain {
       ]);
 
       if (!rcpt) {
-        logger.debug("Failed to fetch tx receipt", {
-          creatorTxHash,
+        logger.debug("Failed to fetch receipt, not found", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
-          error: `Transaction's receipt ${creatorTxHash} not found on RPC ${sdk.provider.url} and chain ${this.chainId}`
+          creatorTxHash
         });
         continue;
       }
 
       const block = await this.getBlockByHash(rcpt.blockHash);
-      logger.info("Fetched tx receipt", {
-        creatorTxHash,
+      logger.debug("Succeed to fetch receipt", {
         providerUrl: sdk.provider.url,
-        chainId: this.chainId
+        chainId: this.chainId,
+        creatorTxHash
       });
       return new TransactionReceipt(
         {
@@ -247,35 +239,27 @@ export class Chain extends SourcifyChain {
     for (const sdk of this.confluxSdks) {
       currentProviderIndex++;
       try {
-        logger.info("Fetching bytecode", {
-          address,
-          epochNumber,
-          providerUrl: sdk.provider.url,
-          chainId: this.chainId,
-          currentProviderIndex,
-          providersLength: this.providers.length
-        });
         // Race the RPC call with a timeout
         const bytecode = await Promise.race([
           sdk.getCode(address, epochNumber),
           this.rejectInMs(sdk.provider.url)
         ]);
-        logger.info("Fetched bytecode", {
+        logger.debug("Succeed to fetched bytecode", {
+          providerUrl: sdk.provider.url,
+          chainId: this.chainId,
           address,
           epochNumber,
           bytecodeLength: bytecode.length,
-          bytecodeStart: bytecode.slice(0, 32),
-          providerUrl: sdk.provider.url,
-          chainId: this.chainId
+          bytecodeStart: bytecode.slice(0, 32)
         });
         return bytecode;
       } catch (err) {
         if (err instanceof Error) {
           logger.debug("Failed to fetch bytecode", {
-            address,
-            epochNumber,
             providerUrl: sdk.provider.url,
             chainId: this.chainId,
+            address,
+            epochNumber,
             error: err.message
           });
         } else {
@@ -320,16 +304,14 @@ export class Chain extends SourcifyChain {
         );
       }
       creationBytecode = creatorTx.data;
-      logger.info(`Contract ${address} created with an EOA`);
+      logger.debug("Contract created with an EOA", { address });
     } else {
       if (!this.traceSupport) {
         throw new Error(
           `No trace support for chain ${this.chainId}. No other method to get the creation bytecode`
         );
       }
-      logger.info(
-        `Contract ${address} created with a factory. Fetching traces`
-      );
+      logger.debug("Contract created with a factory", { address });
       creationBytecode = await this.getCreationBytecodeForFactory(
         transactionHash,
         address
@@ -365,27 +347,21 @@ export class Chain extends SourcifyChain {
         );
       }
       const sdk = this.confluxSdks[index];
-      logger.info("Fetching creation bytecode from parity traces", {
-        creatorTxHash,
-        address,
-        providerUrl: sdk.provider.url,
-        chainId: this.chainId
-      });
       try {
         return await this.extractFromParityTrace(creatorTxHash, address, sdk);
       } catch (e: any) {
-        logger.info("Failed to fetch creation bytecode from parity traces", {
-          creatorTxHash,
-          address,
+        logger.debug("Failed to fetch creation bytecode", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
+          address,
+          creatorTxHash,
           error: e.message
         });
       }
     }
 
     throw new Error(
-      "Could not get the creation bytecode for factory " +
+      "None of the RPCs responded fetching creation bytecode for " +
       address +
       " with tx " +
       creatorTxHash +
@@ -404,10 +380,10 @@ export class Chain extends SourcifyChain {
       this.rejectInMs(sdk.provider.url)
     ]);
     if (traces instanceof Array && traces.length > 0) {
-      logger.info("Fetched tx traces", {
-        creatorTxHash,
+      logger.debug("Succeed to fetch traces", {
         providerUrl: sdk.provider.url,
-        chainId: this.chainId
+        chainId: this.chainId,
+        creatorTxHash,
       });
     } else {
       throw new Error(
@@ -439,10 +415,11 @@ export class Chain extends SourcifyChain {
         `Provided tx ${creatorTxHash} does not create the expected contract ${address}. Created contracts by this tx: ${createTraces.map((t) => t.action.addr).join(", ")}`
       );
     }
-    logger.info("Found contract bytecode in traces", {
+    logger.debug("Succeed to found creation bytecode in traces", {
+      providerUrl: sdk.provider.url,
+      chainId: this.chainId,
       address,
       creatorTxHash,
-      chainId: this.chainId
     });
 
     if (createTrace.action.init) {
@@ -464,35 +441,34 @@ export class Chain extends SourcifyChain {
           this.rejectInMs(sdk.provider.url)
         ]);
         if (!block) {
-          logger.info("Block not published yet", {
-            blockHash,
+          logger.debug("Failed to fetch block, not published yet", {
             providerUrl: sdk.provider.url,
-            chainId: this.chainId
+            chainId: this.chainId,
+            blockHash
           });
           continue;
         }
 
-        logger.info("Fetched block", {
-          blockHash,
-          blockTimestamp: block.timestamp,
+        logger.debug("Succeed to fetch block", {
           providerUrl: sdk.provider.url,
-          chainId: this.chainId
+          chainId: this.chainId,
+          blockHash
         });
         return block;
       } catch (err: any) {
-        logger.debug("Failed to fetch the block", {
-          blockHash,
+        logger.debug("Failed to fetch block", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
+          blockHash,
           error: err.message
         });
       }
     }
 
-    logger.debug("None of the RPCs responded for fetching block", {
-      blockHash,
+    logger.debug("None of the RPCs responded fetching block", {
       providers: this.providers.map((p) => p.url),
-      chainId: this.chainId
+      chainId: this.chainId,
+      blockHash
     });
     throw new Error(
       "None of the RPCs responded fetching block " +
@@ -509,19 +485,19 @@ export class Chain extends SourcifyChain {
 
     for (const sdk of this.confluxSdks) {
       try {
-        const epoch = await Promise.race([
+        const epochNumber = await Promise.race([
           sdk.getEpochNumber(),
           this.rejectInMs(sdk.provider.url)
         ]);
-        logger.log("Fetched cfx_epochNumber", {
-          epochNumber: epoch,
+        logger.debug("Succeed to fetch epochNumber", {
           providerUrl: sdk.provider.url,
-          chainId: this.chainId
+          chainId: this.chainId,
+          epochNumber
         });
-        return epoch;
+        return epochNumber;
       } catch (err) {
         if (err instanceof Error) {
-          logger.debug("Failed to fetch cfx_epochNumber", {
+          logger.debug("Failed to fetch epochNumber", {
             providerUrl: sdk.provider.url,
             chainId: this.chainId,
             error: err.message
@@ -556,7 +532,12 @@ export class Chain extends SourcifyChain {
                 "expected a numbers with less than largest epoch number."
               )
             ) {
-              logger.log(`Failed to get blocks at epoch ${epochNumber}`, err);
+              logger.debug("Failed to fetch blocks", {
+                providerUrl: sdk.provider.url,
+                chainId: this.chainId,
+                epochNumber,
+                error: err
+              });
             }
             return [];
           });
@@ -573,35 +554,34 @@ export class Chain extends SourcifyChain {
 
           if (hashes.length === blocks.length) {
             const params = this.buildBlockParams(blocks);
-            logger.info("Fetched epoch", {
-              epochNumber,
-              blockTimestamp: params.timestamp,
+            logger.debug("Succeed to fetch epoch", {
               providerUrl: sdk.provider.url,
-              chainId: this.chainId
+              chainId: this.chainId,
+              epochNumber
             });
             return new Block(params, sdk.provider);
           } else {
-            logger.info("Epoch not published yet", {
-              epochNumber,
+            logger.debug("Failed to fetch epoch, not published yet", {
               providerUrl: sdk.provider.url,
-              chainId: this.chainId
+              chainId: this.chainId,
+              epochNumber
             });
           }
         }
       } catch (err: any) {
-        logger.debug("Failed to fetch the epoch", {
-          epochNumber,
+        logger.debug("Failed to fetch epoch", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
+          epochNumber,
           error: err.message
         });
       }
     }
 
-    logger.debug("None of the RPCs responded for fetching epoch", {
-      epochNumber,
+    logger.debug("None of the RPCs responded fetching epoch", {
       providers: this.providers.map((p) => p.url),
-      chainId: this.chainId
+      chainId: this.chainId,
+      epochNumber,
     });
     throw new Error(
       `None of the RPCs responded fetching epoch ${epochNumber} on chain ${this.chainId}`
@@ -664,34 +644,34 @@ export class Chain extends SourcifyChain {
       try {
         const receipts = await provider.send("eth_getBlockReceipts", [toQuantity(blockNumber)]);
         if (receipts) {
-          /*console.info("Fetched block receipts", {
-            blockNumber,
+          logger.debug("Succeed to fetch receipts", {
             providerUrl: provider.url,
-            chainId: this.chainId
-          });*/
+            chainId: this.chainId,
+            blockNumber
+          });
           return receipts;
         } else {
-          /*console.info("block receipts not published yet", {
-            blockNumber,
+          logger.debug("Failed to fetch receipts，not published yet", {
             providerUrl: provider.url,
-            chainId: this.chainId
-          });*/
+            chainId: this.chainId,
+            blockNumber
+          });
         }
       } catch (err: any) {
-        /*console.warn("Failed to fetch block receipts", {
-          blockNumber,
+        logger.debug("Failed to fetch receipts", {
           providerUrl: provider.url,
           chainId: this.chainId,
+          blockNumber,
           error: err.message
-        });*/
+        });
       }
     }
 
-    /*console.error("None of the RPCs responded for fetching block receipts", {
-      blockNumber,
+    logger.debug("None of the RPCs responded fetching receipts", {
       providers: this.providers.map((p) => p.url),
-      chainId: this.chainId
-    });*/
+      chainId: this.chainId,
+      blockNumber
+    });
     throw new Error(
       `None of the RPCs responded fetching block receipts ${blockNumber} on chain ${this.chainId}`
     );
@@ -704,34 +684,34 @@ export class Chain extends SourcifyChain {
       try {
         const receipts: any[][] = await sdk.getEpochReceipts(epochNumber);
         if (receipts) {
-          /*console.info("Fetched epoch receipts", {
-            epochNumber,
+          logger.debug("Succeed to fetch epoch receipts", {
             providerUrl: sdk.provider.url,
-            chainId: this.chainId
-          });*/
+            chainId: this.chainId,
+            epochNumber
+          });
           return receipts.flat();
         } else {
-          /*console.info("Epoch receipts not published yet", {
-            epochNumber,
+          logger.debug("Failed to fetch epoch receipts, not published yet", {
             providerUrl: sdk.provider.url,
-            chainId: this.chainId
-          });*/
+            chainId: this.chainId,
+            epochNumber,
+          });
         }
       } catch (err: any) {
-        /*console.warn("Failed to fetch epoch receipts", {
-          epochNumber,
+        logger.debug("Failed to fetch epoch receipts", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
+          epochNumber,
           error: err.message
-        });*/
+        });
       }
     }
 
-    /*console.error("None of the RPCs responded for fetching epoch receipts", {
-      epochNumber,
+    logger.debug("None of the RPCs responded fetching epoch receipts", {
       providers: this.confluxSdks.map((p) => p.provider.url),
-      chainId: this.chainId
-    });*/
+      chainId: this.chainId,
+      epochNumber
+    });
     throw new Error(
       `None of the RPCs responded fetching epoch receipts ${epochNumber} on chain ${this.chainId}`
     );
@@ -750,30 +730,31 @@ export class Chain extends SourcifyChain {
             return block.number;
           }
         } catch (err: any) {
-          errs.push(`${err.message} ${provider.url}`);
-          logger.debug("Failed to fetch block", {
+          errs.push({ url: provider.url, error: err.message });
+          logger.debug("Failed to fetch blockNumber", {
             providerUrl: provider.url,
             chainId: this.chainId,
+            tag,
             error: err.message
           });
         }
       }
 
       throw new Error(
-        `Failed to fetch block from chain ${this.chainId}\n${errs.join("\n")}`
+        `None of the RPCs responded fetching blockNumber from chain ${this.chainId}. ${JSON.stringify(errs)}`
       );
     }
 
     for (const sdk of this.confluxSdks) {
       try {
-        const epoch = await Promise.race([
+        const epochNumber = await Promise.race([
           sdk.getEpochNumber(tag),
           this.rejectInMs(sdk.provider.url)
         ]);
-        return epoch;
+        return epochNumber;
       } catch (err: any) {
-        errs.push(`${err.message} ${sdk.provider.url}`);
-        logger.debug("Failed to fetch epoch", {
+        errs.push({ url: sdk.provider.url, error: err.message });
+        logger.debug("Failed to fetch epochNumber", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
           error: err.message
@@ -782,7 +763,7 @@ export class Chain extends SourcifyChain {
     }
 
     throw new Error(
-      `Failed to fetch epoch from chain ${this.chainId}\n${errs.join("\n")}`
+      `None of the RPCs responded fetching epochNumber from chain ${this.chainId}. ${JSON.stringify(errs)}`
     );
   };
 
@@ -807,7 +788,7 @@ export class Chain extends SourcifyChain {
           ]);
           return logs;
         } catch (err: any) {
-          errs.push(`${err.message} ${provider.url}`);
+          errs.push({ url: provider.url, error: err.message });
           logger.debug("Failed to fetch logs", {
             providerUrl: provider.url,
             chainId: this.chainId,
@@ -817,7 +798,7 @@ export class Chain extends SourcifyChain {
       }
 
       throw new Error(
-        `Failed to fetch logs from chain ${this.chainId}\n${errs.join("\n")}`
+        `None of the RPCs responded fetching logs from chain ${this.chainId}. ${JSON.stringify(errs)}`
       );
     }
 
@@ -834,7 +815,7 @@ export class Chain extends SourcifyChain {
         ]);
         return logs;
       } catch (err: any) {
-        errs.push(`${err.message} ${sdk.provider.url}`);
+        errs.push({ url: sdk.provider.url, error: err.message });
         logger.debug("Failed to fetch logs", {
           providerUrl: sdk.provider.url,
           chainId: this.chainId,
@@ -844,7 +825,7 @@ export class Chain extends SourcifyChain {
     }
 
     throw new Error(
-      `Failed to fetch logs from chain ${this.chainId}\n${errs.join("\n")}`
+      `None of the RPCs responded fetching logs from chain ${this.chainId}. ${JSON.stringify(errs)}`
     );
   };
 }
