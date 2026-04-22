@@ -1,7 +1,6 @@
 services:
   verification:
-    build:
-      context: .
+    image: node:22.22.0-libssl3:latest
     mem_limit: 1536m
     memswap_limit: 1536m
     command: node /verification/server.js
@@ -21,8 +20,7 @@ services:
       start_period: 30s
 
   monitor:
-    build:
-      context: .
+    image: node:22.22.0-libssl3:latest
     command: node /verification/services/monitor/Monitor.js
     restart: unless-stopped
     network_mode: host
