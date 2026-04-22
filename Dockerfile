@@ -1,13 +1,7 @@
 FROM node:22.22.0
 
-# install cargo and rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN rustc --version && cargo --version
-
 # install iputils-ping
 RUN apt-get update && \
-    apt-get install -y iputils-ping && \
     apt-get install -y --no-install-recommends libssl3 && \
     rm -rf /var/lib/apt/lists/*
 
