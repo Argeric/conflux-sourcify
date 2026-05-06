@@ -16,23 +16,26 @@ router.get("/chains", (_req, res) => {
   const chainsArray = Object.values(chainMap);
   const chains = chainsArray.map(
     ({
-      rpcWithoutApiKeys,
+      rpcs,
       name,
       title,
       chainId,
       supported,
-      etherscanApi,
       confluxscanApi,
-      traceSupportedRPCs,
     }) => {
       return {
         name,
         title,
         chainId,
-        rpc: rpcWithoutApiKeys,
-        traceSupportedRPCs,
+        rpc: rpcs
+        .map((r) => r.urlWithoutApiKey)
+        .filter((url) => url !== undefined),
+        traceSupportedRPCs: rpcs
+          .map((r, index) =>
+            r.traceSupport ? { type: r.traceSupport, index } : null,
+          )
+          .filter((r) => r !== null),
         supported,
-        etherscanAPI: etherscanApi?.apiURL,
         confluxscanApi: confluxscanApi?.apiURL,
       };
     },

@@ -32,20 +32,19 @@ export default {
       name: "Conflux coreSpace testnet",
       supported: true,
       corespace: true,
-      confluxscanApi: {
-        apiURL: "https://api-testnet.confluxscan.org",
-      },
       fetchContractCreationTxUsing: {
         confluxscanApi: true
       },
-      rpc: [
-        process.env.CHAIN_1_RPC_1 || "http://test.confluxrpc.com",
-        process.env.CHAIN_1_RPC_2 || "http://test-internal.confluxrpc.com"
-      ],
-      traceSupportedRPCs: [
+      confluxscanApi: {
+        apiURL: "https://api-testnet.confluxscan.org",
+      },
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 1,
+          rpc: process.env.CHAIN_1_RPC_1 || 'http://test.confluxrpc.com',
+        },
+        {
+          rpc: process.env.CHAIN_1_RPC_2 || 'http://test-internal.confluxrpc.com',
+          traceSupport: 'trace_transaction',
         },
       ],
       sync: {
@@ -56,21 +55,20 @@ export default {
     71: {
       name: "Conflux eSpace testnet",
       supported: true,
-      confluxscanApi: {
-        apiURL: "https://evmapi-testnet.confluxscan.org",
-      },
       fetchContractCreationTxUsing: {
         confluxscanApi: true
       },
-      rpc: [
-        process.env.CHAIN_71_RPC_1 || "http://evmtestnet.confluxrpc.com",
-        process.env.CHAIN_71_RPC_2 || "http://evmtestnet-internal.confluxrpc.com"
-      ],
-      traceSupportedRPCs: [
+      confluxscanApi: {
+        apiURL: "https://evmapi-testnet.confluxscan.org",
+      },
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 1,
+          rpc: process.env.CHAIN_71_RPC_1 || "http://evmtestnet.confluxrpc.com",
         },
+        {
+          rpc: process.env.CHAIN_71_RPC_2 || "http://evmtestnet-internal.confluxrpc.com",
+          traceSupport: 'trace_transaction',
+        }
       ],
       sync: {
         delayBlocksAgainstLatest: 3,
@@ -81,21 +79,20 @@ export default {
       name: "Conflux coreSpace mainnet",
       supported: true,
       corespace: true,
-      confluxscanApi: {
-        apiURL: "https://api-stage.confluxscan.org",
-      },
       fetchContractCreationTxUsing: {
         confluxscanApi: true
       },
-      rpc: [
-        process.env.CHAIN_1029_RPC_1 || "http://main.confluxrpc.com",
-        process.env.CHAIN_1029_RPC_2 || "http://main-internal.confluxrpc.com",
-      ],
-      traceSupportedRPCs: [
+      confluxscanApi: {
+        apiURL: "https://api-stage.confluxscan.org",
+      },
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 1,
+          rpc: process.env.CHAIN_1029_RPC_1 || "http://main.confluxrpc.com",
         },
+        {
+          rpc: process.env.CHAIN_1029_RPC_2 || "http://main-internal.confluxrpc.com",
+          traceSupport: 'trace_transaction',
+        }
       ],
       sync: {
         delayBlocksAgainstLatest: 3,
@@ -105,21 +102,20 @@ export default {
     1030: {
       name: "Conflux eSpace mainnet",
       supported: true,
-      confluxscanApi: {
-        apiURL: "https://evmapi.confluxscan.org",
-      },
       fetchContractCreationTxUsing: {
         confluxscanApi: true
       },
-      rpc: [
-        process.env.CHAIN_1030_RPC_1 || "http://evm.confluxrpc.com",
-        process.env.CHAIN_1030_RPC_2 || "http://evm-internal.confluxrpc.com"
-      ],
-      traceSupportedRPCs: [
+      confluxscanApi: {
+        apiURL: "https://evmapi.confluxscan.org",
+      },
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 1,
+          rpc: process.env.CHAIN_1030_RPC_1 || "http://evm.confluxrpc.com",
         },
+        {
+          rpc: process.env.CHAIN_1030_RPC_2 || "http://evm-internal.confluxrpc.com",
+          traceSupport: 'trace_transaction',
+        }
       ],
       sync: {
         delayBlocksAgainstLatest: 3,
@@ -133,7 +129,11 @@ export default {
       confluxscanApi: {
         apiURL: "https://chainscan-test.0g.ai/open",
       },
-      rpc: ["http://evmrpc-testnet.0g.ai"],
+      rpcs: [
+        {
+          rpc: "http://evmrpc-testnet.0g.ai",
+        }
+      ],
     },
     16661: {
       name: "0G mainnet",
@@ -142,22 +142,42 @@ export default {
       confluxscanApi: {
         apiURL: "https://chainscan.0g.ai/open",
       },
-      rpc: ["http://evmrpc.0g.ai"],
+      rpcs: [
+        {
+          rpc: "http://evmrpc.0g.ai",
+        }
+      ],
     },
+    /*1: {
+      name: "Ethereum Mainnet",
+      supported: true,
+      corespace: false,
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      confluxscanApi: {
+        apiURL: "https://api.etherscan.io/v2",
+        apiKeyEnvName: "ETHERSCAN_API_KEY",
+      },
+      rpcs: [
+        {
+          rpc: "https://ethereum-rpc.publicnode.com",
+        }
+      ],
+    },*/
     17000: {
       name: "Ethereum Holesky Testnet",
       supported: true,
       corespace: false,
       confluxscanApi: {
-        apiURL: "https://api-holesky.etherscan.io",
+        apiURL: "https://api.etherscan.io/v2",
         apiKeyEnvName: "ETHERSCAN_API_KEY",
       },
-      rpc: ["https://ethereum-holesky-rpc.publicnode.com"],
-      traceSupportedRPCs: [
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 0,
-        },
+          rpc: "https://ethereum-holesky-rpc.publicnode.com",
+          traceSupport: 'trace_transaction',
+        }
       ],
     },
     560048: {
@@ -168,19 +188,22 @@ export default {
         apiURL: "https://api.etherscan.io/v2",
         apiKeyEnvName: "ETHERSCAN_API_KEY",
       },
-      rpc: ["https://0xrpc.io/hoodi"],
-      traceSupportedRPCs: [
+      rpcs: [
         {
-          type: "trace_transaction",
-          index: 0,
-        },
+          rpc: "https://0xrpc.io/hoodi",
+          traceSupport: 'trace_transaction',
+        }
       ],
     },
     31337: {
       name: "Hardhat Network Localhost",
       supported: true,
       corespace: false,
-      rpc: [`http://localhost:8545`],
+      rpcs: [
+        {
+          rpc: "http://localhost:8545",
+        }
+      ],
     },
   },
   chainHealth: {

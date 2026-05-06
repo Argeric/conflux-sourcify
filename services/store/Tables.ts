@@ -22,7 +22,7 @@ import {
   VerifiedContract as VerifiedContractApiObject,
   Nullable,
 } from "../../routes/types";
-import { keccak256 } from "ethers";
+import { JsonFragment, keccak256 } from 'ethers';
 import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
@@ -173,11 +173,13 @@ export namespace Tables {
     name: string;
     fully_qualified_name: string;
     compilation_artifacts: {
-      abi: Nullable<Abi>;
+      abi: Nullable<JsonFragment[]>;
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
+      methodIdentifiers?: Nullable<any>;
+      ir?: any;
     };
     compiler_settings: Omit<
       SoliditySettings | VyperSettings,
@@ -208,11 +210,13 @@ export namespace Tables {
     name!: string;
     fully_qualified_name!: string;
     compilation_artifacts!: {
-      abi: Nullable<Abi>;
+      abi: Nullable<JsonFragment[]>;
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
+      methodIdentifiers?: Nullable<any>;
+      ir?: any;
     };
     compiler_settings!: Omit<
       SoliditySettings | VyperSettings,

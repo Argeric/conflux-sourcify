@@ -17,9 +17,9 @@ import {
   Field,
   FIELDS_TO_STORED_PROPERTIES,
 } from "../../../services/store/Tables";
-import { SourcifyChainMap } from "@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes";
 import { getChainId } from "../errors";
 import logger from "../../../services/log/logger";
+import { ChainMap } from '../../../server';
 
 interface ListContractsRequest extends Request {
   params: {
@@ -87,7 +87,7 @@ export async function getContractEndpoint(
     omit: req.query.omit,
   });
   const services = req.app.get("services") as Services;
-  const sourcifyChainMap = req.app.get("chains") as SourcifyChainMap;
+  const sourcifyChainMap = req.app.get("chains") as ChainMap;
 
   let fields = req.query.fields?.split(",") as Field[];
   if (fields?.includes("all" as Field)) {

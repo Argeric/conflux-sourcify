@@ -133,7 +133,7 @@ export const getSolcJsonInputFromConfluxscanResult = (
         : undefined,
     libraries: {}, // TODO: Check the library format
   };
-  logger.log(
+  logger.debug(
     "confluxscan-util: generated compiler setting from confluxscan result",
     generatedSettings,
   );
