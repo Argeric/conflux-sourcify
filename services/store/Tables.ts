@@ -15,8 +15,8 @@ import {
   SolidityOutputContract,
   SoliditySettings,
   VyperSettings,
-  SourcifyLibErrorData,
-} from "@ethereum-sourcify/lib-sourcify";
+  SourcifyLibErrorData, VyperSourceMap,
+} from '@ethereum-sourcify/lib-sourcify';
 import { Abi } from "abitype";
 import {
   VerifiedContract as VerifiedContractApiObject,
@@ -193,7 +193,7 @@ export namespace Tables {
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
     runtime_code_artifacts: {
-      sourceMap: Nullable<string>;
+      sourceMap: string | VyperSourceMap | null;
       linkReferences: Nullable<LinkReferences>;
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
@@ -1277,6 +1277,19 @@ export async function getDatabaseColumnsFromVerification(
     }),
   );
 
+  let compiler;
+  switch (verification.compilation.language.toLocaleLowerCase()) {
+    case "yul":
+    case "solidity":
+      compiler = "solc";
+      break;
+    case "vyper":
+      compiler = "vyper";
+      break;
+    default:
+      throw new Error("Language not supported");
+  }
+
   return {
     recompiledCreationCode,
     recompiledRuntimeCode: {
@@ -1298,10 +1311,7 @@ export async function getDatabaseColumnsFromVerification(
     },
     compiledContract: {
       language: verification.compilation.language.toLocaleLowerCase(),
-      compiler:
-        verification.compilation.language.toLocaleLowerCase() === "solidity"
-          ? "solc"
-          : "vyper",
+      compiler,
       compiler_settings: prepareCompilerSettingsFromVerification(verification),
       name: verification.compilation.compilationTarget.name,
       version: verification.compilation.compilerVersion,

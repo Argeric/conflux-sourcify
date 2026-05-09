@@ -65,12 +65,18 @@ export class VyperCompilation extends AbstractCompilation {
       {},
     );
 
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      outputSelection: _outputSelection,
+      ...settingsWithoutOutputSelection
+    } = this.jsonInput.settings || {};
+
     this._metadata = {
       compiler: { version: this.compilerVersion },
       language: "Vyper",
       output: outputMetadata,
       settings: {
-        ...this.jsonInput.settings,
+        ...settingsWithoutOutputSelection,
         compilationTarget: {
           [this.compilationTarget.path]: this.compilationTarget.name,
         },
@@ -191,8 +197,8 @@ export class VyperCompilation extends AbstractCompilation {
       ) {
         this._runtimeBytecodeCborAuxdata = this.tryGenerateCborAuxdataPosition(
           this.runtimeBytecode,
-          runtimeAuxdataCbor,
-          runtimeCborLengthHex,
+          runtimeAuxdataCbor as string,
+          runtimeCborLengthHex as string,
         );
       } else {
         this._runtimeBytecodeCborAuxdata = {};
@@ -205,8 +211,8 @@ export class VyperCompilation extends AbstractCompilation {
 
       this._creationBytecodeCborAuxdata = this.tryGenerateCborAuxdataPosition(
         this.creationBytecode,
-        creationAuxdataCbor,
-        creationCborLengthHex,
+        creationAuxdataCbor as string,
+        creationCborLengthHex as string,
       );
     } catch (error) {
       logWarn("Cannot generate cbor auxdata positions", {

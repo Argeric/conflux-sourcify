@@ -26,7 +26,7 @@ export function validateChainId(
 ) {
   const chainMap = req.app.get("chains") as ChainMap;
   const keys = new Set(Object.keys(chainMap));
-  if (!keys.has(req.params.chainId) || !chainMap[req.params.chainId]) {
+  if (!keys.has(req.params.chainId as string) || !chainMap[req.params.chainId as string]) {
     logger.info("Invalid chainId in params", {
       params: req.params,
     });
@@ -42,7 +42,7 @@ export function validateAddress(
 ) {
   try {
     // Checksum the address
-    req.params.address = getAddress(req.params.address);
+    req.params.address = getAddress(req.params.address as string);
   } catch (err: any) {
     logger.info("Invalid address in params", {
       errorMessage: err.message,
@@ -219,9 +219,9 @@ export async function checkIfAlreadyVerified(
   next: NextFunction,
 ) {
   const { address, chainId } = req.params;
-  const chain = getChainId(chainId);
+  const chain = getChainId(chainId as string);
   const services = req.app.get("services") as Services;
-  const contract = await services.store.getContract(chain, address);
+  const contract = await services.store.getContract(chain, address as string);
   if (
     contract.runtimeMatch === "exact_match" &&
     contract.creationMatch === "exact_match"
@@ -240,11 +240,11 @@ export async function checkIfJobIsAlreadyRunning(
   next: NextFunction,
 ) {
   const { address, chainId } = req.params;
-  const chain = getChainId(chainId);
+  const chain = getChainId(chainId as string);
   const services = req.app.get("services") as Services;
   const jobs = await services.store.getVerificationJobsByChainAndAddress(
     chain,
-    address,
+    address as string,
   );
   if (
     jobs.length > 0 &&
@@ -270,7 +270,7 @@ export async function validateFuncSelectorHash(
 ) {
   const { hash } = req.params;
 
-  if (!/^0x[a-fA-F0-9]{8}$/.test(hash)) {
+  if (!/^0x[a-fA-F0-9]{8}$/.test(hash as string)) {
     throw new InvalidParameterError(`Invalid func selector hash: ${hash}, it's like 0x11223344.`);
   }
 

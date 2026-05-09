@@ -116,6 +116,54 @@ describe("POST /verify/:chainId/:address", function () {
     );
   });
 
+  it("should verify a Yul contract", async () => {
+    const { resolveWorkers } = makeWorkersWait();
+
+    const yulContractPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "sources",
+      "yul",
+      "cas-forwarder",
+    );
+    const yulArtifact = JSON.parse(
+      fs.readFileSync(path.join(yulContractPath, "artifact.json"), "utf8"),
+    );
+    const jsonInput = JSON.parse(
+      fs.readFileSync(path.join(yulContractPath, "jsonInput.json"), "utf8"),
+    );
+    const sourceFileName = "cas-forwarder.yul";
+    const contractIdentifier = `${sourceFileName}:cas-forwarder`;
+
+    const { contractAddress, txHash } =
+      await deployFromAbiAndBytecodeForCreatorTxHash(
+        chainFixture.localSigner,
+        yulArtifact.abi,
+        yulArtifact.bytecode,
+      );
+
+    const verifyRes = await chai
+      .request(serverFixture.server.app)
+      .post(`/verify/${chainFixture.chainId}/${contractAddress}`)
+      .send({
+        stdJsonInput: jsonInput,
+        compilerVersion: "0.8.26+commit.8a97fa7a",
+        contractIdentifier,
+        creationTransactionHash: txHash,
+      });
+
+    await assertJobVerification(
+      serverFixture,
+      verifyRes,
+      resolveWorkers,
+      chainFixture.chainId,
+      contractAddress,
+      "match",
+    );
+  });
+
   it("should fetch the creation transaction hash if not provided", async () => {
     const { resolveWorkers } = makeWorkersWait();
 

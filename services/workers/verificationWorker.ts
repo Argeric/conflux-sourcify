@@ -1,7 +1,5 @@
 import Piscina from "piscina";
 import {
-  SolidityJsonInput,
-  VyperJsonInput,
   SourcifyLibError,
 } from "@ethereum-sourcify/lib-sourcify";
 import { resolve } from "path";
@@ -29,10 +27,11 @@ import { ChainInstance } from "../../config/Loader";
 import { ChainMap } from "../../server";
 import { Verification } from "./Verification";
 import { SolidityCompilation } from "../compilation/SolidityCompilation";
-import { VyperCompilation } from "../compilation/VyperCompilation";
 import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
 import { useAllSourcesAndReturnCompilation } from "../validation/processFiles";
 import logger from "../log/logger";
+import { createCompilationFromJsonInput } from '../utils/compilation';
+import { AnyCompilation } from '../compilation/CompilationTypes';
 
 export const filename = resolve(__filename);
 
@@ -101,23 +100,14 @@ async function _verifyFromJsonInput({
   compilationTarget,
   creationTransactionHash,
 }: VerifyFromJsonInput): Promise<VerifyOutput> {
-  let compilation: SolidityCompilation | VyperCompilation | undefined;
+  let compilation: AnyCompilation;
   try {
-    if (jsonInput.language === "Solidity") {
-      compilation = new SolidityCompilation(
-        solc,
-        compilerVersion,
-        jsonInput as SolidityJsonInput,
-        compilationTarget,
-      );
-    } else if (jsonInput.language === "Vyper") {
-      compilation = new VyperCompilation(
-        vyper,
-        compilerVersion,
-        jsonInput as VyperJsonInput,
-        compilationTarget,
-      );
-    }
+    compilation = createCompilationFromJsonInput(
+      { solc, vyper },
+      compilerVersion,
+      jsonInput,
+      compilationTarget,
+    );
   } catch (error: any) {
     return {
       errorExport: createErrorExport(error),
