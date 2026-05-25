@@ -103,6 +103,13 @@ export async function getContractEndpoint(
     omit,
   );
 
+  if (contract?.compilation) {
+    const { compiler, compilerVersion } = contract.compilation;
+    if (compiler === "solc" && !compilerVersion.startsWith("v")) {
+      contract.compilation.compilerVersion = `v${contract.compilation.compilerVersion}`;
+    }
+  }
+
   if (!contract.match) {
     res.status(StatusCodes.NOT_FOUND).json(contract);
     return;
