@@ -5,6 +5,7 @@ import {
 import { resolve } from "path";
 import { SolcLocal } from "../compiler/SolcLocal";
 import { VyperLocal } from "../compiler/VyperLocal";
+import { FeLocal } from "../compiler/FeLocal";
 import { v4 as uuidv4 } from "uuid";
 import { getCreatorTx } from "../utils/contract-creation-util";
 import type {
@@ -38,9 +39,10 @@ export const filename = resolve(__filename);
 let chainMap: { [chainId: string]: Chain };
 let solc: SolcLocal;
 let vyper: VyperLocal;
+let fe: FeLocal;
 
 const initWorker = () => {
-  if (chainMap && solc && vyper) {
+  if (chainMap && solc && vyper && fe) {
     return;
   }
 
@@ -62,6 +64,7 @@ const initWorker = () => {
   );
 
   vyper = new VyperLocal(Piscina.workerData.vyperRepoPath);
+  fe = new FeLocal(Piscina.workerData.feRepoPath);
 };
 
 async function runWorkerFunctionWithContext<T extends VerificationWorkerInput>(
@@ -103,7 +106,7 @@ async function _verifyFromJsonInput({
   let compilation: AnyCompilation;
   try {
     compilation = createCompilationFromJsonInput(
-      { solc, vyper },
+      { solc, vyper, fe },
       compilerVersion,
       jsonInput,
       compilationTarget,

@@ -9,6 +9,7 @@ import { Sequelize } from "sequelize";
 export type ServerFixtureOptions = {
   port: number;
   skipDatabaseReset: boolean;
+  chains: ChainMap;
 };
 
 export class ServerFixture {
@@ -61,6 +62,7 @@ export class ServerFixture {
           solcRepoPath: config.solc.solcBinRepo,
           solJsonRepoPath: config.solc.solcJsRepo,
           vyperRepoPath: config.vyper.vyperRepo,
+          feRepoPath: config.fe.feRepo,
           workerIdleTimeout: 3000,
           concurrentVerificationsPerWorker: 1,
         },

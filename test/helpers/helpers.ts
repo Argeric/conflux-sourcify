@@ -80,6 +80,45 @@ export async function deployFromAbiAndBytecodeForCreatorTxHash(
   };
 }
 
+/**
+ * Takes the creation bytecode as it is and runs it in a transaction.
+ * Assumes that constructor arguments are already appended.
+ */
+export async function deployFromBytecodeForCreatorTxHash(
+  signer: JsonRpcSigner,
+  bytecode: string,
+): Promise<DeploymentInfo> {
+  console.log(`Deploying contract from bytecode`);
+  const tx = await signer.sendTransaction({
+    data: bytecode,
+  });
+  const receipt = await tx.wait();
+
+  if (!receipt) {
+    throw new Error(`No receipt found for transaction ${tx.hash}`);
+  }
+  if (!receipt.contractAddress) {
+    throw new Error(
+      `No contract address found in receipt for transaction ${tx.hash}`,
+    );
+  }
+  if (receipt.blockNumber === null) {
+    throw new Error(
+      `No block number found for deployment transaction ${tx.hash}. Block number: ${receipt.blockNumber}`,
+    );
+  }
+  console.log(
+    `Deployed contract at ${receipt.contractAddress} with tx ${tx.hash}`,
+  );
+
+  return {
+    contractAddress: receipt.contractAddress,
+    txHash: tx.hash,
+    blockNumber: receipt.blockNumber,
+    txIndex: receipt.index,
+  };
+}
+
 /*export async function verifyContract(
   serverFixture: ServerFixture,
   chainFixture: LocalChainFixture,
@@ -116,6 +155,7 @@ export async function verifyContract(
   chainFixture: LocalChainFixture,
   contractAddress?: string,
   creatorTxHash?: string,
+  partial: boolean = false,
 ) {
   const verifyResponse = await chai
     .request(serverFixture.server.app)
@@ -123,11 +163,18 @@ export async function verifyContract(
       `/verify/${chainFixture.chainId}/${contractAddress || chainFixture.defaultContractAddress}`,
     )
     .send({
-      stdJsonInput: chainFixture.defaultContractJsonInput,
+      stdJsonInput:
+        partial
+          ? chainFixture.defaultContractJsonInput
+          : chainFixture.defaultContractModifiedJsonInput,
       compilerVersion:
-        chainFixture.defaultContractMetadataObject.compiler.version,
+        partial
+          ? chainFixture.defaultContractModifiedMetadataObject.compiler.version
+          : chainFixture.defaultContractMetadataObject.compiler.version,
       contractIdentifier: Object.entries(
-        chainFixture.defaultContractMetadataObject.settings.compilationTarget,
+        partial
+          ? chainFixture.defaultContractModifiedMetadataObject.settings.compilationTarget
+          : chainFixture.defaultContractMetadataObject.settings.compilationTarget
       )[0].join(":"),
       creationTransactionHash:
         creatorTxHash || chainFixture.defaultContractCreatorTx,
@@ -169,6 +216,7 @@ export async function completeVerification(
 export async function deployAndVerifyContract(
   chainFixture: LocalChainFixture,
   serverFixture: ServerFixture,
+  partial: boolean = false,
 ) {
   const { contractAddress, txHash } =
     await deployFromAbiAndBytecodeForCreatorTxHash(
@@ -177,7 +225,13 @@ export async function deployAndVerifyContract(
       chainFixture.defaultContractArtifact.bytecode,
       [],
     );
-  await verifyContract(serverFixture, chainFixture, contractAddress, txHash);
+  await verifyContract(
+    serverFixture,
+    chainFixture,
+    contractAddress,
+    txHash,
+    partial,
+  );
   return contractAddress;
 }
 

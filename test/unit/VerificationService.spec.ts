@@ -97,6 +97,7 @@ describe("VerificationService", function () {
         solcRepoPath: config.solc.solcBinRepo,
         solJsonRepoPath: config.solc.solcJsRepo,
         vyperRepoPath: config.vyper.vyperRepo,
+        feRepoPath: config.fe.feRepo,
         workerIdleTimeout: 3000,
         concurrentVerificationsPerWorker: 1,
       },

@@ -16,6 +16,9 @@ export default {
   vyper: {
     vyperRepo: process.env.VYPER_REPO || "./vyper-repo",
   },
+  fe: {
+    vyperRepo: process.env.FE_REPO || "./fe-repo",
+  },
   mysql: {
     host: process.env.MYSQL_HOST || "127.0.0.1",
     port: parseInt(process.env.MYSQL_PORT || "3306"),

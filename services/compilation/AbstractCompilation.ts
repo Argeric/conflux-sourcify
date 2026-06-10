@@ -7,6 +7,7 @@ import {
   CompilationError,
   ISolidityCompiler,
   IVyperCompiler,
+  IFeCompiler,
 } from "@ethereum-sourcify/lib-sourcify";
 import {
   ImmutableReferences,
@@ -18,6 +19,9 @@ import {
   VyperJsonInput,
   VyperOutput,
   VyperOutputContract,
+  FeJsonInput,
+  FeOutput,
+  FeOutputContract,
 } from "@ethereum-sourcify/compilers-types";
 import {
   logInfo,
@@ -26,17 +30,22 @@ import {
 } from "@ethereum-sourcify/compilers/build/main/logger";
 import logger from "../log/logger";
 
+function cleanCompilerVersion(version: string): string {
+  // Remove non-numerical characters from the beginning of the version string
+  return version.replace(/^[^\d]*/, '');
+}
+
 export abstract class AbstractCompilation {
   /**
    * Constructor parameters
    */
-  abstract compiler: ISolidityCompiler | IVyperCompiler;
-  abstract compilerVersion: string;
+  abstract compiler: ISolidityCompiler | IVyperCompiler | IFeCompiler;
+  compilerVersion: string;
   abstract compilationTarget: CompilationTarget;
-  jsonInput: SolidityJsonInput | VyperJsonInput;
+  jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput;
 
   protected _metadata?: Metadata;
-  compilerOutput?: SolidityOutput | VyperOutput;
+  compilerOutput?: SolidityOutput | VyperOutput | FeOutput;
   compilationTime?: number;
 
   abstract auxdataStyle: AuxdataStyle;
@@ -55,13 +64,17 @@ export abstract class AbstractCompilation {
     forceEmscripten?: boolean,
   ): Promise<void>;
 
-  constructor(jsonInput: SolidityJsonInput | VyperJsonInput) {
+  constructor(
+    compilerVersion: string,
+    jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput,
+  ) {
+    this.compilerVersion = cleanCompilerVersion(compilerVersion);
     this.jsonInput = structuredClone(jsonInput);
   }
 
   public async compileAndReturnCompilationTarget(
     forceEmscripten = false,
-  ): Promise<SolidityOutputContract | VyperOutputContract> {
+  ): Promise<SolidityOutputContract | VyperOutputContract| FeOutputContract> {
     const version = this.compilerVersion;
 
     const compilationStartTime = Date.now();
@@ -140,7 +153,7 @@ export abstract class AbstractCompilation {
     return contractFullQualifyNames;
   }
 
-  get contractCompilerOutput(): SolidityOutputContract | VyperOutputContract {
+  get contractCompilerOutput(): SolidityOutputContract | VyperOutputContract| FeOutputContract {
     if (!this.compilerOutput) {
       logWarn("Compiler output is undefined");
       throw new CompilationError({ code: "no_compiler_output" });

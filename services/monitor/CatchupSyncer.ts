@@ -80,7 +80,7 @@ export class CatchupSyncer extends BaseSyncer {
 
     for (; ;) {
       const result = await this.batchGetLogsBestEffort(start, end,
-        [this.chain.announcement], this.TOPICS);
+        [this.chain.announcement!], this.TOPICS);
       end = result.end;
 
       await this.store(start, end, result.logs);

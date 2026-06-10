@@ -36,7 +36,7 @@ export class Chain extends SourcifyChain {
   };
   readonly fetchContractCreationTxUsing?: FetchContractCreationTxUsing;
   readonly corespace: boolean | undefined;
-  readonly announcement: string;
+  readonly announcement: string | undefined;
   readonly syncOptions?: SyncOptions;
   readonly confluxSdks: Conflux[];
 

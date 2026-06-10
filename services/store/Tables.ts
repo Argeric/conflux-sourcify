@@ -459,7 +459,7 @@ export namespace Tables {
           verified_contract_id: { type: DataTypes.BIGINT, allowNull: false },
           runtime_match: { type: DataTypes.CHAR(20) },
           creation_match: { type: DataTypes.CHAR(20) },
-          metadata: { type: DataTypes.JSON, allowNull: false },
+          metadata: { type: DataTypes.JSON },
           license_type: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -746,7 +746,7 @@ export type GetSourcifyMatchByChainAddressResult = Tables.ISourcifyMatch &
     Tables.IVerifiedContract,
     "creation_values" | "runtime_values" | "compilation_id"
   > &
-  Pick<Tables.ICompiledContract, "runtime_code_artifacts" | "name"> &
+  Pick<Tables.ICompiledContract, "runtime_code_artifacts" | "name" | "version"> &
   Pick<Tables.IContractDeployment, "transaction_hash"> & {
     onchain_runtime_code: string;
   };

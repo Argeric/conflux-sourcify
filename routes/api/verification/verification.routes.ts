@@ -2,18 +2,17 @@ import {
   validateAddress,
   validateChainId,
   validateContractIdentifier,
+  validateMetadata,
   checkIfAlreadyVerified,
   checkIfJobIsAlreadyRunning,
   validateStandardJsonInput,
-  validateMetadata,
-  validateCompilerVersion,
-  validateSources,
+  validateAndNormalizeFeInput,
 } from "../middlewares";
 import {
-  verifyFromConfluxscanEndpoint,
-  verifyFromCrossChainEndpoint,
   verifyFromJsonInputEndpoint,
   verifyFromMetadataEndpoint,
+  verifyFromConfluxscanEndpoint,
+  verifyFromCrossChainEndpoint,
 } from "./verification.handlers";
 import { Router } from "express";
 
@@ -25,8 +24,8 @@ router
     validateChainId,
     validateAddress,
     validateStandardJsonInput,
+    validateAndNormalizeFeInput,
     validateContractIdentifier,
-    validateCompilerVersion,
     checkIfAlreadyVerified,
     checkIfJobIsAlreadyRunning,
     verifyFromJsonInputEndpoint,
@@ -38,7 +37,6 @@ router
     validateChainId,
     validateAddress,
     validateMetadata,
-    validateSources,
     checkIfAlreadyVerified,
     checkIfJobIsAlreadyRunning,
     verifyFromMetadataEndpoint,

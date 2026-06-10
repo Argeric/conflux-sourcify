@@ -266,6 +266,7 @@ export class Dao {
           verified_contracts.compilation_id,
           compiled_contracts.runtime_code_artifacts,
           compiled_contracts.name,
+          compiled_contracts.version,
           contract_deployments.transaction_hash,
           CONVERT(onchain_runtime_code.code USING utf8) AS onchain_runtime_code
         FROM sourcify_matches

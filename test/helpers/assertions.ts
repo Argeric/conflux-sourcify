@@ -17,8 +17,12 @@ export async function assertContractSaved(
   expectedAddress: string | undefined,
   expectedChain: number | undefined,
   expectedStatus: VerificationStatus,
+  metadataExpected: boolean = true,
 ) {
-  if (expectedStatus === "perfect" || expectedStatus === "partial") {
+  if (
+    (expectedStatus === "perfect" || expectedStatus === "partial") &&
+    metadataExpected
+  ) {
     // Check if saved to the database
     const list = await sourcifyDatabase.query(
       `SELECT
@@ -62,6 +66,7 @@ export async function assertJobVerification(
   testChainId: number,
   testAddress: string,
   expectedMatch: MatchLevel,
+  metadataExpected: boolean = true,
 ) {
   chai
     .expect(verifyResponse.status)
@@ -129,6 +134,7 @@ export async function assertJobVerification(
     testAddress,
     testChainId,
     toVerificationStatus(expectedMatch),
+    metadataExpected,
   );
 }
 
@@ -141,6 +147,7 @@ export const assertVerification = async (
   expectedAddress: string,
   expectedChain: number,
   expectedStatus: VerificationStatus = "perfect",
+  metadataExpected: boolean = true,
 ) => {
   try {
     chai.expect(err).to.be.null;
@@ -161,6 +168,7 @@ export const assertVerification = async (
       expectedAddress,
       expectedChain,
       expectedStatus,
+      metadataExpected,
     );
     if (done) done();
   } catch (e) {

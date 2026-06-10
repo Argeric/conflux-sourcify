@@ -82,7 +82,7 @@ export class Syncer extends BaseSyncer {
 
     let logs;
     if (this.syncDataByLogs) {
-      logs = await this.chain.getLogs(this.currentBlock, this.currentBlock, [this.chain.announcement], this.TOPICS);
+      logs = await this.chain.getLogs(this.currentBlock, this.currentBlock, [this.chain.announcement!], this.TOPICS);
     } else {
       const receipts: any[] = await this.chain.getBlockReceipts(this.currentBlock);
       const statusFilter = this.chain.corespace ?

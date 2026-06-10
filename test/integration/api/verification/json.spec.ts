@@ -113,6 +113,7 @@ describe("POST /verify/:chainId/:address", function () {
       chainFixture.chainId,
       contractAddress,
       "match",
+      false,
     );
   });
 
@@ -161,6 +162,7 @@ describe("POST /verify/:chainId/:address", function () {
       chainFixture.chainId,
       contractAddress,
       "match",
+      false,
     );
   });
 

@@ -1,5 +1,7 @@
 import {
   SolidityJsonInput,
+  VyperJsonInput,
+  FeJsonInput,
   VerificationExport,
   CompilationTarget,
   Metadata,
@@ -38,6 +40,7 @@ export interface VerificationOptions {
   solcRepoPath: string;
   solJsonRepoPath: string;
   vyperRepoPath: string;
+  feRepoPath: string;
   initCompilers?: boolean;
   workerIdleTimeout?: number;
   concurrentVerificationsPerWorker?: number;
@@ -75,6 +78,7 @@ export class VerificationService {
         solcRepoPath: options.solcRepoPath,
         solJsonRepoPath: options.solJsonRepoPath,
         vyperRepoPath: options.vyperRepoPath,
+        feRepoPath: options.feRepoPath,
         chains,
       },
       minThreads: os.availableParallelism() * 0.5,
@@ -149,7 +153,7 @@ export class VerificationService {
     verificationEndpoint: string,
     chainId: number,
     address: string,
-    jsonInput: SolidityJsonInput,
+    jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput,
     compilerVersion: string,
     compilationTarget: CompilationTarget,
     constructorArguments?: string,
