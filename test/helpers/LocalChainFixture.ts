@@ -124,7 +124,7 @@ export class LocalChainFixture {
    * Expected to be called in a "describe" block.
    */
   constructor(options: LocalChainFixtureOptions = {}) {
-    this._chainId = String(options.chainId) ?? DEFAULT_CHAIN_ID;
+    this._chainId = String(options.chainId ?? DEFAULT_CHAIN_ID);
     this._port = options.port ?? HARDHAT_PORT;
 
     const chains = loadConfig().chains;

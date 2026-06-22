@@ -147,7 +147,7 @@ describe("POST /verify/etherscan/:chainId/:address", function () {
     );
 
     const verifyRes = await request(serverFixture.server.app)
-      .post(`/v2/verify/etherscan/${testChainId}/${testAddress}`)
+      .post(`/verify/confluxscan/${testChainId}/${testAddress}`)
       .send({});
 
     expect(verifyRes.status).to.equal(202);
@@ -156,7 +156,7 @@ describe("POST /verify/etherscan/:chainId/:address", function () {
     await resolveWorkers();
 
     const jobStatusRes = await request(serverFixture.server.app).get(
-      `/v2/verify/${verifyRes.body.verificationId}`,
+      `/verify/${verifyRes.body.verificationId}`,
     );
 
     expect(jobStatusRes.status).to.equal(200);

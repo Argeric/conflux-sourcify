@@ -167,7 +167,7 @@ async function fetchFromApi(fetchAddress: string) {
       "Content-Type": "application/json",
       "Accept": "application/json"
     },
-    timeout: 30000,
+    timeout: 3000,
     family: 4
   });
 

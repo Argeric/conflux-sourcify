@@ -81,13 +81,14 @@ export class Dao {
           verified_contract_id,
           creation_match,
           runtime_match,
-          metadataStr,
+          metadataStr || null,
           license_type || CONST.LICENSES.None.code,
           contract_label || null,
           similar_match_chain_id || null,
           similar_match_address || null,
           now,
         ],
+        logging: sql => console.log(sql)
       },
     );
 

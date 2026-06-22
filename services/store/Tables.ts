@@ -426,7 +426,7 @@ export namespace Tables {
     verified_contract_id: number;
     runtime_match: Nullable<VerificationStatus>;
     creation_match: Nullable<VerificationStatus>;
-    metadata: Metadata;
+    metadata?: Nullable<Metadata>;
     license_type?: number;
     contract_label?: string;
     similar_match_chain_id?: number;
@@ -441,7 +441,7 @@ export namespace Tables {
     verified_contract_id!: number;
     runtime_match!: Nullable<VerificationStatus>;
     creation_match!: Nullable<VerificationStatus>;
-    metadata!: Metadata;
+    metadata?: Nullable<Metadata>;
     license_type?: number;
     contract_label?: string;
     similar_match_chain_id?: number;
