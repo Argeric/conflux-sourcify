@@ -48,17 +48,18 @@ export class ServerFixture {
       for (const chainObj of Object.values(config.chains)) {
         chainMap[chainObj.chainId.toString()] = new Chain(chainObj);
       }
+      const chains = fixtureOptions_?.chains || chainMap;
 
       this._server = new Server(
         {
           port: config.server.port,
           maxFileSize: config.server.maxFileSize,
           enableProfile: config.server.enableProfile,
-          chains: chainMap,
+          chains,
           solc,
         },
         {
-          chains: chainMap,
+          chains,
           solcRepoPath: config.solc.solcBinRepo,
           solJsonRepoPath: config.solc.solcJsRepo,
           vyperRepoPath: config.vyper.vyperRepo,

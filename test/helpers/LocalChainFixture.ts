@@ -127,9 +127,6 @@ export class LocalChainFixture {
     this._chainId = String(options.chainId ?? DEFAULT_CHAIN_ID);
     this._port = options.port ?? HARDHAT_PORT;
 
-    const chains = loadConfig().chains;
-    const localChain = chains[Number(this._chainId)];
-
     before(async () => {
       // Init IPFS mock with all the necessary pinned files
       const mockContent = await readFilesFromDirectory(
@@ -146,9 +143,10 @@ export class LocalChainFixture {
 
       this.hardhatNodeProcess = await startHardhatNetwork(this._port);
 
+      const sourcifyChainHardhat = loadConfig().chains[Number(DEFAULT_CHAIN_ID)];
       const ethersNetwork = new Network(
-        localChain.rpcs[0].rpc as string,
-        localChain.chainId,
+        sourcifyChainHardhat.rpcs[0].rpc as string,
+        sourcifyChainHardhat.chainId,
       );
       this._localSigner = await new JsonRpcProvider(
         `http://localhost:${this._port}`,

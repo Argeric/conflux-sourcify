@@ -13,7 +13,7 @@ import {
   CompilationLanguage,
   Transformation,
   TransformationValues,
-  VerificationStatus,
+  VerificationStatus, TransientStorageLayout
 } from "@ethereum-sourcify/lib-sourcify";
 import { Response } from "express";
 import { Abi } from "abitype";
@@ -90,6 +90,7 @@ export interface VerifiedContract extends VerifiedContractMinimal {
   abi?: Nullable<Abi>;
   metadata?: Nullable<Metadata>;
   storageLayout?: Nullable<StorageLayout>;
+  transientStorageLayout?: Nullable<TransientStorageLayout>;
   userdoc?: Nullable<Userdoc>;
   devdoc?: Nullable<Devdoc>;
   sourceIds?: Nullable<
@@ -128,6 +129,12 @@ export interface VerifiedABI {
   hash: string;
   signature: string;
   fullFormat: string;
+}
+
+export interface SignatureRepresentations {
+  signature: string;
+  signatureHash32: string;
+  signatureHash4: string;
 }
 
 /**

@@ -180,3 +180,31 @@ export async function getContractEndpoint(
 
   res.status(StatusCodes.OK).json(contract);
 }
+
+interface GetContractAllChainsRequest extends Request {
+  params: {
+    address: string;
+  };
+}
+
+type GetContractAllChainsResponse = TypedResponse<{
+  results: VerifiedContractMinimal[];
+}>;
+
+export async function getContractAllChainsEndpoint(
+  req: GetContractAllChainsRequest,
+  res: GetContractAllChainsResponse,
+) {
+  logger.debug("getContractAllChainsEndpoint", {
+    address: req.params.address,
+  });
+  const services = req.app.get("services") as Services;
+  const resultsObject = await services.store.getContractsAllChains(req.params.address);
+
+  if (resultsObject.results.length === 0) {
+    res.status(StatusCodes.NOT_FOUND).json(resultsObject);
+    return;
+  }
+
+  res.status(StatusCodes.OK).json(resultsObject);
+}

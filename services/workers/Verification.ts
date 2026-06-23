@@ -33,7 +33,6 @@ import {
 } from "@ethereum-sourcify/compilers-types";
 import { AbstractCompilation } from "../compilation/AbstractCompilation";
 import { SolidityCompilation } from "../compilation/SolidityCompilation";
-import { VyperCompilation } from "../compilation/VyperCompilation";
 import {
   blueprintDeployerBytecode,
   parseBlueprintPreamble,
@@ -788,6 +787,9 @@ export class Verification {
           devdoc: contractCompilerOutput?.devdoc,
           storageLayout: (contractCompilerOutput as SolidityOutputContract)
             ?.storageLayout,
+          transientStorageLayout: (
+            contractCompilerOutput as SolidityOutputContract
+          )?.transientStorageLayout,
           evm: {
             bytecode: {
               sourceMap: (contractCompilerOutput as SolidityOutputContract)?.evm

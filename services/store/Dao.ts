@@ -2,7 +2,7 @@ import {
   CompiledContractSource,
   CountSourcifyMatchAddresses,
   GetSourcifyMatchByChainAddressResult,
-  GetSourcifyMatchByChainAddressWithPropertiesResult,
+  GetSourcifyMatchByChainAddressWithPropertiesResult, GetSourcifyMatchesAllChainsResult,
   GetSourcifyMatchesByChainResult,
   GetVerificationJobByIdResult,
   GetVerificationJobsByChainAndAddressResult,
@@ -10,7 +10,7 @@ import {
   SourceInformation,
   STORED_PROPERTIES_TO_SELECTORS,
   StoredProperties,
-  Tables,
+  Tables
 } from "./Tables";
 import { QueryTypes, Sequelize, Transaction } from "sequelize";
 import { DatabaseOptions } from "../../config/Loader";
@@ -88,7 +88,6 @@ export class Dao {
           similar_match_address || null,
           now,
         ],
-        logging: sql => console.log(sql)
       },
     );
 
@@ -351,6 +350,32 @@ export class Dao {
     return records?.length
       ? (records[0] as GetSourcifyMatchByChainAddressWithPropertiesResult)
       : null;
+  }
+
+  async getSourcifyMatchesAllChains(
+    address: string,
+  ): Promise<GetSourcifyMatchesAllChainsResult[]> {
+    const selectors = [
+      STORED_PROPERTIES_TO_SELECTORS["id"],
+      STORED_PROPERTIES_TO_SELECTORS["creation_match"],
+      STORED_PROPERTIES_TO_SELECTORS["runtime_match"],
+      STORED_PROPERTIES_TO_SELECTORS["address"],
+      STORED_PROPERTIES_TO_SELECTORS["chain_id"],
+      STORED_PROPERTIES_TO_SELECTORS["verified_at"],
+    ];
+    return await this.pool.query(
+      `SELECT 
+        ${selectors.join(", ")}
+      FROM contract_deployments
+      JOIN verified_contracts ON verified_contracts.deployment_id = contract_deployments.id
+      JOIN sourcify_matches ON sourcify_matches.verified_contract_id = verified_contracts.id
+      WHERE contract_deployments.address = ?
+      `,
+      {
+        type: QueryTypes.SELECT,
+        replacements: [address],
+      },
+    );
   }
 
   async getSourcifyMatchAddressesByChainAndMatch(

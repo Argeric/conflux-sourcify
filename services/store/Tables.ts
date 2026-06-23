@@ -15,9 +15,8 @@ import {
   SolidityOutputContract,
   SoliditySettings,
   VyperSettings,
-  SourcifyLibErrorData, VyperSourceMap,
-} from '@ethereum-sourcify/lib-sourcify';
-import { Abi } from "abitype";
+  SourcifyLibErrorData, VyperSourceMap, TransientStorageLayout
+} from "@ethereum-sourcify/lib-sourcify";
 import {
   VerifiedContract as VerifiedContractApiObject,
   Nullable,
@@ -177,9 +176,8 @@ export namespace Tables {
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
+      transientStorageLayout: Nullable<TransientStorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
-      methodIdentifiers?: Nullable<any>;
-      ir?: any;
     };
     compiler_settings: Omit<
       SoliditySettings | VyperSettings,
@@ -214,6 +212,7 @@ export namespace Tables {
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
+      transientStorageLayout: Nullable<TransientStorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
       methodIdentifiers?: Nullable<any>;
       ir?: any;
@@ -792,7 +791,9 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
       | "runtime_transformations"
       | "runtime_values"
     > &
-    Pick<Tables.IContractDeployment, "block_number" | "transaction_index"> & {
+    Pick<Tables.IContractDeployment,
+      "block_number" | "transaction_index" | "chain_id"
+    > & {
       verified_at: string;
       address: string;
       onchain_creation_code: string;
@@ -810,11 +811,21 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
       deployer: string;
       sources: { [path: string]: { content: string } };
       storage_layout: Tables.ICompiledContract["compilation_artifacts"]["storageLayout"];
+      transient_storage_layout: Tables.ICompiledContract["compilation_artifacts"]["transientStorageLayout"];
       source_ids: Tables.ICompiledContract["compilation_artifacts"]["sources"];
       std_json_input: SolidityJsonInput | VyperJsonInput;
       std_json_output: SolidityOutput | VyperOutput;
     }
 >;
+
+export type GetSourcifyMatchesAllChainsResult = Pick<
+  Tables.ISourcifyMatch,
+  "id" | "creation_match" | "runtime_match"
+> &
+  Pick<Tables.IContractDeployment, "chain_id"> & {
+  address: string;
+  verified_at: string;
+};
 
 export type CompiledContractSource = Tables.ICompiledContractSource &
   Pick<Tables.ISource, "content">;
@@ -860,6 +871,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   id: "sourcify_matches.id",
   creation_match: "sourcify_matches.creation_match",
   runtime_match: "sourcify_matches.runtime_match",
+  chain_id: "contract_deployments.chain_id",
   verified_at:
     "DATE_FORMAT(sourcify_matches.created_at, '%Y-%m-%dT%H:%i:%sT') as verified_at",
   license_type: "sourcify_matches.license_type",
@@ -910,6 +922,8 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   metadata: "sourcify_matches.metadata",
   storage_layout:
     "compiled_contracts.compilation_artifacts->'$.storageLayout' as storage_layout",
+  transient_storage_layout:
+    "compiled_contracts.compilation_artifacts->'$.transientStorageLayout' as transient_storage_layout",
   userdoc: "compiled_contracts.compilation_artifacts->'$.userdoc' as userdoc",
   devdoc: "compiled_contracts.compilation_artifacts->'$.devdoc' as devdoc",
   source_ids:
@@ -934,6 +948,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
           'userdoc', compiled_contracts.compilation_artifacts->'$.userdoc',
           'devdoc', compiled_contracts.compilation_artifacts->'$.devdoc',
           'storageLayout', compiled_contracts.compilation_artifacts->'$.storageLayout',
+          'transientStorageLayout', compiled_contracts.compilation_artifacts->'$.transientStorageLayout',
           'evm', json_object(
             'bytecode', json_object(
               'object', nullif(CONVERT(recompiled_creation_code.code USING utf8), '0x'),
@@ -1038,6 +1053,7 @@ export const FIELDS_TO_STORED_PROPERTIES: Record<
   abi: "abi",
   metadata: "metadata",
   storageLayout: "storage_layout",
+  transientStorageLayout: "transient_storage_layout",
   userdoc: "userdoc",
   devdoc: "devdoc",
   sourceIds: "source_ids",
@@ -1214,6 +1230,9 @@ export async function getDatabaseColumnsFromVerification(
     devdoc: compilerOutput?.devdoc || null,
     storageLayout:
       (compilerOutput as SolidityOutputContract)?.storageLayout || null,
+    transientStorageLayout:
+      (compilerOutput as SolidityOutputContract)?.transientStorageLayout ||
+      null,
     sources: verification.compilation.compilerOutput?.sources || null,
   };
   const creationCodeArtifacts = {

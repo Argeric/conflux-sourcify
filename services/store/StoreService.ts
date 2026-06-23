@@ -751,6 +751,24 @@ export class StoreService extends StoreBase implements RWStorageService {
     return result;
   };
 
+  getContractsAllChains = async (
+    address: string,
+  ): Promise<{ results: VerifiedContractMinimal[] }> => {
+    const result = await this.database.getSourcifyMatchesAllChains(address);
+
+    const results: VerifiedContractMinimal[] = result.map((row) => ({
+      match: getTotalMatchLevel(row.creation_match, row.runtime_match),
+      creationMatch: toMatchLevel(row.creation_match),
+      runtimeMatch: toMatchLevel(row.runtime_match),
+      matchId: row.id,
+      chainId: row.chain_id,
+      address: getAddress(row.address),
+      verifiedAt: row.verified_at,
+    }));
+
+    return { results };
+  };
+
   getVerificationJob = async (
     verificationId: string,
   ): Promise<VerificationJob | null> => {

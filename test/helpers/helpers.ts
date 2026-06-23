@@ -157,28 +157,29 @@ export async function verifyContract(
   creatorTxHash?: string,
   partial: boolean = false,
 ) {
+  const verifyRequest = {
+    stdJsonInput:
+      partial
+        ? chainFixture.defaultContractModifiedJsonInput
+        : chainFixture.defaultContractJsonInput,
+    compilerVersion:
+      partial
+        ? chainFixture.defaultContractModifiedMetadataObject.compiler.version
+        : chainFixture.defaultContractMetadataObject.compiler.version,
+    contractIdentifier: Object.entries(
+      partial
+        ? chainFixture.defaultContractModifiedMetadataObject.settings.compilationTarget
+        : chainFixture.defaultContractMetadataObject.settings.compilationTarget
+    )[0].join(":"),
+    creationTransactionHash:
+      creatorTxHash || chainFixture.defaultContractCreatorTx,
+  }
   const verifyResponse = await chai
     .request(serverFixture.server.app)
     .post(
       `/verify/${chainFixture.chainId}/${contractAddress || chainFixture.defaultContractAddress}`,
     )
-    .send({
-      stdJsonInput:
-        partial
-          ? chainFixture.defaultContractJsonInput
-          : chainFixture.defaultContractModifiedJsonInput,
-      compilerVersion:
-        partial
-          ? chainFixture.defaultContractModifiedMetadataObject.compiler.version
-          : chainFixture.defaultContractMetadataObject.compiler.version,
-      contractIdentifier: Object.entries(
-        partial
-          ? chainFixture.defaultContractModifiedMetadataObject.settings.compilationTarget
-          : chainFixture.defaultContractMetadataObject.settings.compilationTarget
-      )[0].join(":"),
-      creationTransactionHash:
-        creatorTxHash || chainFixture.defaultContractCreatorTx,
-    });
+    .send(verifyRequest);
 
   chai
     .expect(verifyResponse.status)

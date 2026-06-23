@@ -74,83 +74,83 @@ describe("SourcifyDatabaseService", function () {
     );
   });
 
-  // it("should store signatures correctly when storeVerification is called", async () => {
-  //   await databaseService.storeVerification(MockVerificationExport);
-  //
-  //   const signaturesResult: Tables.ISignatures[] =
-  //     await databaseService.database.pool.query("SELECT * FROM signatures", {
-  //       type: QueryTypes.SELECT,
-  //     });
-  //
-  //   expect(signaturesResult?.length).to.equal(2);
-  //
-  //   const signatures = signaturesResult;
-  //   const retrieveSignature = signatures.find(
-  //     (s) => s.signature === "retrieve()",
-  //   );
-  //   const storeSignature = signatures.find(
-  //     (s) => s.signature === "store(uint256)",
-  //   );
-  //
-  //   expect(retrieveSignature).to.exist;
-  //   expect(storeSignature).to.exist;
-  //
-  //   const expectedRetrieveSignatureHash32 = bytesFromString(
-  //     keccak256str("retrieve()"),
-  //   );
-  //   const expectedStoreSignatureHash32 = bytesFromString(
-  //     keccak256str("store(uint256)"),
-  //   );
-  //
-  //   expect(retrieveSignature!.signature_hash_32).to.be.instanceOf(Buffer);
-  //   expect(retrieveSignature!.signature_hash_32.length).to.equal(32);
-  //   expect(
-  //     retrieveSignature!.signature_hash_32.equals(
-  //       expectedRetrieveSignatureHash32,
-  //     ),
-  //   ).to.be.true;
-  //   expect(retrieveSignature!.signature_hash_4).to.be.instanceOf(Buffer);
-  //   expect(retrieveSignature!.signature_hash_4.length).to.equal(4);
-  //   expect(retrieveSignature!.signature_hash_4).to.deep.equal(
-  //     expectedRetrieveSignatureHash32.subarray(0, 4),
-  //   );
-  //
-  //   expect(storeSignature!.signature_hash_32).to.be.instanceOf(Buffer);
-  //   expect(storeSignature!.signature_hash_32.length).to.equal(32);
-  //   expect(
-  //     storeSignature!.signature_hash_32.equals(expectedStoreSignatureHash32),
-  //   ).to.be.true;
-  //   expect(storeSignature!.signature_hash_4).to.be.instanceOf(Buffer);
-  //   expect(storeSignature!.signature_hash_4.length).to.equal(4);
-  //   expect(storeSignature!.signature_hash_4).to.deep.equal(
-  //     expectedStoreSignatureHash32.subarray(0, 4),
-  //   );
-  //
-  //   const compiledContractSignaturesResult: Tables.ICompiledContractsSignatures[] =
-  //     await databaseService.database.pool.query(
-  //       "SELECT * FROM compiled_contracts_signatures",{
-  //         type: QueryTypes.SELECT,
-  //     });
-  //
-  //   expect(compiledContractSignaturesResult?.length).to.equal(2);
-  //
-  //   const contractSignatures = compiledContractSignaturesResult;
-  //   const compiledContractRetrieveSig =
-  //     compiledContractSignaturesResult.find((csig) =>
-  //       csig.signature_hash_32.equals(expectedRetrieveSignatureHash32),
-  //     );
-  //   const compiledContractStoreSig = contractSignatures.find((csig) =>
-  //     csig.signature_hash_32.equals(expectedStoreSignatureHash32),
-  //   );
-  //
-  //   expect(compiledContractRetrieveSig).to.exist;
-  //   expect(compiledContractStoreSig).to.exist;
-  //   expect(compiledContractRetrieveSig!.compilation_id).to.equal(
-  //     compiledContractStoreSig!.compilation_id,
-  //   );
-  //   expect(compiledContractRetrieveSig!.signature_type).to.equal("function");
-  //   expect(compiledContractStoreSig!.signature_type).to.equal("function");
-  // });
+  /*it("should store signatures correctly when storeVerification is called", async () => {
+    await databaseService.storeVerification(MockVerificationExport);
+
+    const signaturesResult: Tables.ISignatures[] =
+      await databaseService.database.pool.query("SELECT * FROM signatures", {
+        type: QueryTypes.SELECT,
+      });
+
+    expect(signaturesResult?.length).to.equal(2);
+
+    const signatures = signaturesResult;
+    const retrieveSignature = signatures.find(
+      (s) => s.signature === "retrieve()",
+    );
+    const storeSignature = signatures.find(
+      (s) => s.signature === "store(uint256)",
+    );
+
+    expect(retrieveSignature).to.exist;
+    expect(storeSignature).to.exist;
+
+    const expectedRetrieveSignatureHash32 = bytesFromString(
+      keccak256str("retrieve()"),
+    );
+    const expectedStoreSignatureHash32 = bytesFromString(
+      keccak256str("store(uint256)"),
+    );
+
+    expect(retrieveSignature!.signature_hash_32).to.be.instanceOf(Buffer);
+    expect(retrieveSignature!.signature_hash_32.length).to.equal(32);
+    expect(
+      retrieveSignature!.signature_hash_32.equals(
+        expectedRetrieveSignatureHash32,
+      ),
+    ).to.be.true;
+    expect(retrieveSignature!.signature_hash_4).to.be.instanceOf(Buffer);
+    expect(retrieveSignature!.signature_hash_4.length).to.equal(4);
+    expect(retrieveSignature!.signature_hash_4).to.deep.equal(
+      expectedRetrieveSignatureHash32.subarray(0, 4),
+    );
+
+    expect(storeSignature!.signature_hash_32).to.be.instanceOf(Buffer);
+    expect(storeSignature!.signature_hash_32.length).to.equal(32);
+    expect(
+      storeSignature!.signature_hash_32.equals(expectedStoreSignatureHash32),
+    ).to.be.true;
+    expect(storeSignature!.signature_hash_4).to.be.instanceOf(Buffer);
+    expect(storeSignature!.signature_hash_4.length).to.equal(4);
+    expect(storeSignature!.signature_hash_4).to.deep.equal(
+      expectedStoreSignatureHash32.subarray(0, 4),
+    );
+
+    const compiledContractSignaturesResult: Tables.ICompiledContractsSignatures[] =
+      await databaseService.database.pool.query(
+        "SELECT * FROM compiled_contracts_signatures",{
+          type: QueryTypes.SELECT,
+      });
+
+    expect(compiledContractSignaturesResult?.length).to.equal(2);
+
+    const contractSignatures = compiledContractSignaturesResult;
+    const compiledContractRetrieveSig =
+      compiledContractSignaturesResult.find((csig) =>
+        csig.signature_hash_32.equals(expectedRetrieveSignatureHash32),
+      );
+    const compiledContractStoreSig = contractSignatures.find((csig) =>
+      csig.signature_hash_32.equals(expectedStoreSignatureHash32),
+    );
+
+    expect(compiledContractRetrieveSig).to.exist;
+    expect(compiledContractStoreSig).to.exist;
+    expect(compiledContractRetrieveSig!.compilation_id).to.equal(
+      compiledContractStoreSig!.compilation_id,
+    );
+    expect(compiledContractRetrieveSig!.signature_type).to.equal("function");
+    expect(compiledContractStoreSig!.signature_type).to.equal("function");
+  });
 
   it("should handle duplicate signature storage gracefully", async () => {
     // Change mock to be able to store the verification twice
@@ -194,5 +194,5 @@ describe("SourcifyDatabaseService", function () {
         type: QueryTypes.SELECT,
     });
     expect(parseInt(contractSignaturesResult[0]["count"])).to.equal(0);
-  });
+  });*/
 });

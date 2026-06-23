@@ -23,11 +23,6 @@ import {
   FeOutput,
   FeOutputContract,
 } from "@ethereum-sourcify/compilers-types";
-import {
-  logInfo,
-  logSilly,
-  logWarn,
-} from "@ethereum-sourcify/compilers/build/main/logger";
 import logger from "../log/logger";
 
 function cleanCompilerVersion(version: string): string {
@@ -78,13 +73,13 @@ export abstract class AbstractCompilation {
     const version = this.compilerVersion;
 
     const compilationStartTime = Date.now();
-    logInfo("Compiling contract", {
+    logger.info("Compiling contract", {
       version,
       contract: this.compilationTarget.name,
       path: this.compilationTarget.path,
       forceEmscripten,
     });
-    logSilly("Compilation input", { solcJsonInput: this.jsonInput });
+    logger.debug("Compilation input", { solcJsonInput: this.jsonInput });
     try {
       if (!this.compilerOutput) {
         // compile once
@@ -95,14 +90,14 @@ export abstract class AbstractCompilation {
         );
       }
     } catch (e: any) {
-      logWarn("Compiler error", {
+      logger.warn("Compiler error", {
         error: e.message,
       });
       throw new CompilationError({ code: "compiler_error" });
     }
 
     if (this.compilerOutput === undefined) {
-      logWarn("Compiler error: compilerOutput is undefined");
+      logger.warn("Compiler error: compilerOutput is undefined");
       throw new CompilationError({ code: "no_compiler_output" });
     }
 
@@ -111,8 +106,8 @@ export abstract class AbstractCompilation {
 
     const compilationEndTime = Date.now();
     this.compilationTime = compilationEndTime - compilationStartTime;
-    logSilly("Compilation output", { compilerOutput: this.compilerOutput });
-    logInfo("Compiled contract", {
+    logger.debug("Compilation output", { compilerOutput: this.compilerOutput });
+    logger.info("Compiled contract", {
       version,
       contract: this.compilationTarget.name,
       path: this.compilationTarget.path,
@@ -155,9 +150,10 @@ export abstract class AbstractCompilation {
 
   get contractCompilerOutput(): SolidityOutputContract | VyperOutputContract| FeOutputContract {
     if (!this.compilerOutput) {
-      logWarn("Compiler output is undefined");
+      logger.warn("Compiler output is undefined");
       throw new CompilationError({ code: "no_compiler_output" });
     }
+
     if (
       !this.compilerOutput.contracts ||
       !this.compilerOutput.contracts[this.compilationTarget.path] ||
@@ -165,7 +161,7 @@ export abstract class AbstractCompilation {
         this.compilationTarget.name
       ]
     ) {
-      logWarn("Contract not found in compiler output");
+      logger.warn("Contract not found in compiler output");
       throw new CompilationError({
         code: "contract_not_found_in_compiler_output",
       });

@@ -16,9 +16,9 @@ import {
 import {
   findAuxdatasInLegacyAssembly,
 } from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/auxdataUtils";
-import { logWarn } from "@ethereum-sourcify/compilers/build/main/logger";
 import { AbstractCompilation } from "./AbstractCompilation";
 import {findAuxdataPositions} from "./auxdataUtils";
+import logger from "../log/logger";
 
 /**
  * Abstraction of a solidity compilation
@@ -60,6 +60,7 @@ export class SolidityCompilation extends AbstractCompilation {
           "devdoc",
           "userdoc",
           "storageLayout",
+          'transientStorageLayout',
           "evm.legacyAssembly",
           "evm.bytecode.object",
           "evm.bytecode.sourceMap",
@@ -256,7 +257,7 @@ export class SolidityCompilation extends AbstractCompilation {
         editedContractAuxdatasFromCompilerOutput,
       );
     } catch (error) {
-      logWarn("Cannot generate cbor auxdata positions", {
+      logger.warn("Cannot generate cbor auxdata positions", {
         error,
       });
       throw new CompilationError({

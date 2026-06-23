@@ -19,7 +19,7 @@ import {
   CompiledContractCborAuxdata,
   IVyperCompiler,
 } from "@ethereum-sourcify/lib-sourcify";
-import { logWarn } from "@ethereum-sourcify/compilers/build/main/logger";
+import logger from "../log/logger";
 
 export function returnFixedVyperVersion(compilerVersion: string): string {
   if (semver.valid(compilerVersion)) {
@@ -73,7 +73,7 @@ export function returnImmutableReferences(
         };
       }
     } catch (e) {
-      logWarn('Cannot decode vyper contract bytecode', {
+      logger.warn('Cannot decode vyper contract bytecode', {
         creationBytecode: creationBytecode,
       });
     }
@@ -199,7 +199,7 @@ export class VyperCompilation extends AbstractCompilation {
         creationCborLengthHex as string,
       );
     } catch (error) {
-      logWarn("Cannot generate cbor auxdata positions", {
+      logger.warn("Cannot generate cbor auxdata positions", {
         error,
       });
       throw new CompilationError({

@@ -4,14 +4,12 @@ import { deployAndVerifyContract } from "../../../helpers/helpers";
 import { LocalChainFixture } from "../../../helpers/LocalChainFixture";
 import { ServerFixture } from "../../../helpers/ServerFixture";
 import { getAddress } from "ethers";
-import type { SourcifyChainMap } from "@ethereum-sourcify/lib-sourcify";
-import { SourcifyChain } from "@ethereum-sourcify/lib-sourcify";
 import { Chain } from "../../../../services/chain/Chain";
 import { ChainMap } from "../../../../server";
 
 chai.use(chaiHttp);
 
-describe("GET /v2/contract/all-chains/:address", function () {
+describe("GET /contract/all-chains/:address", function () {
   const TEST_CHAIN_IDs = [11111, 22222, 33333];
   const TEST_CHAIN_PORTS = [8546, 8547, 8548];
   const chainFixtures = TEST_CHAIN_IDs.map(
@@ -49,7 +47,7 @@ describe("GET /v2/contract/all-chains/:address", function () {
 
     const res = await chai
       .request(serverFixture.server.app)
-      .get(`/v2/contract/all-chains/${validAddress}`);
+      .get(`/contract/all-chains/${validAddress}`);
     chai.expect(res.status).to.equal(404);
     chai.expect(res.body.results).to.be.an.instanceOf(Array);
     chai.expect(res.body.results.length).to.equal(0);
@@ -73,7 +71,7 @@ describe("GET /v2/contract/all-chains/:address", function () {
     // Check the contract is listed on all chains
     const res = await chai
       .request(serverFixture.server.app)
-      .get(`/v2/contract/all-chains/${addresses[0]}`);
+      .get(`/contract/all-chains/${addresses[0]}`);
     chai.expect(res.status).to.equal(200);
 
     chai
@@ -81,7 +79,7 @@ describe("GET /v2/contract/all-chains/:address", function () {
       .to.equal(TEST_CHAIN_IDs.length);
     TEST_CHAIN_IDs.forEach((chainId) => {
       const matchingResult = res.body.results.find(
-        (result: any) => result.chainId === chainId.toString(),
+        (result: any) => result.chainId === chainId,
       );
 
       chai.expect(matchingResult).to.include({
@@ -89,7 +87,7 @@ describe("GET /v2/contract/all-chains/:address", function () {
         creationMatch: "exact_match",
         runtimeMatch: "exact_match",
         address: addresses[0],
-        chainId: chainId.toString(),
+        chainId: chainId,
       });
     });
   });

@@ -7,7 +7,7 @@ import Sinon from "sinon";
 
 chai.use(chaiHttp);
 
-describe("GET /v2/contracts/:chainId", function () {
+describe("GET /contracts/:chainId", function () {
   const chainFixture = new LocalChainFixture();
   const serverFixture = new ServerFixture();
   const sandbox = Sinon.createSandbox();
@@ -36,7 +36,7 @@ describe("GET /v2/contracts/:chainId", function () {
       runtimeMatch: "match",
       chainId: chainFixture.chainId,
       address,
-      matchId: "1",
+      matchId: 1,
     });
     chai.expect(res.body.results[0]).to.have.property("verifiedAt");
   });
@@ -61,7 +61,7 @@ describe("GET /v2/contracts/:chainId", function () {
       runtimeMatch: "exact_match",
       chainId: chainFixture.chainId,
       address,
-      matchId: "1",
+      matchId: 1,
     });
     chai.expect(res.body.results[0]).to.have.property("verifiedAt");
   });
@@ -85,16 +85,16 @@ describe("GET /v2/contracts/:chainId", function () {
       .get(`/contracts/${chainFixture.chainId}?limit=3`);
     chai.expect(res0.body.results).to.be.an.instanceOf(Array);
     chai.expect(res0.body.results.length).to.equal(3);
-    chai.expect(res0.body.results[0].matchId).to.equal("5");
-    chai.expect(res0.body.results[1].matchId).to.equal("4");
-    chai.expect(res0.body.results[2].matchId).to.equal("3");
+    chai.expect(res0.body.results[0].matchId).to.equal(5);
+    chai.expect(res0.body.results[1].matchId).to.equal(4);
+    chai.expect(res0.body.results[2].matchId).to.equal(3);
 
     // Test afterMatchId with desc
     const res1 = await chai
       .request(serverFixture.server.app)
       .get(`/contracts/${chainFixture.chainId}?limit=2&afterMatchId=4`);
-    chai.expect(res1.body.results[0].matchId).to.equal("3");
-    chai.expect(res1.body.results[1].matchId).to.equal("2");
+    chai.expect(res1.body.results[0].matchId).to.equal(3);
+    chai.expect(res1.body.results[1].matchId).to.equal(2);
 
     // Test afterMatchId with asc
     const res2 = await chai
@@ -102,8 +102,8 @@ describe("GET /v2/contracts/:chainId", function () {
       .get(
         `/contracts/${chainFixture.chainId}?limit=2&afterMatchId=1&sort=asc`,
       );
-    chai.expect(res2.body.results[0].matchId).to.equal("2");
-    chai.expect(res2.body.results[1].matchId).to.equal("3");
+    chai.expect(res2.body.results[0].matchId).to.equal(2);
+    chai.expect(res2.body.results[1].matchId).to.equal(3);
 
     // Test ascending order
     const oldestContractsFirst = contractAddresses;
@@ -122,7 +122,7 @@ describe("GET /v2/contracts/:chainId", function () {
         runtimeMatch: "match",
         chainId: chainFixture.chainId,
         address: oldestContractsFirst[i],
-        matchId: (i + 1).toString(),
+        matchId: i + 1,
       });
     }
 
@@ -143,13 +143,13 @@ describe("GET /v2/contracts/:chainId", function () {
         runtimeMatch: "match",
         chainId: chainFixture.chainId,
         address: newestContractsFirst[i],
-        matchId: (newestContractsFirst.length - i).toString(),
+        matchId: newestContractsFirst.length - i,
       });
     }
   });
 
   it("should return a 400 when the chain is not found", async function () {
-    const unknownChainId = "5";
+    const unknownChainId = chainFixture.chainId;
     const chainMap = serverFixture.server.chains;
     sandbox.stub(chainMap, unknownChainId).value(undefined);
 
