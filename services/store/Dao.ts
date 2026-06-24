@@ -20,6 +20,7 @@ import IContractDeployment = Tables.IContractDeployment;
 import IVerifiedContract = Tables.IVerifiedContract;
 import ISourcifyMatch = Tables.ISourcifyMatch;
 import { CONST } from "../../common/constants";
+import { ConflictError } from "../../common/errors";
 
 export class Dao {
   private readonly options: DatabaseOptions;
@@ -526,6 +527,12 @@ export class Dao {
         ],
       },
     );
+
+    if (effectRows === 0) {
+      throw new ConflictError(
+        "A verified contract already exist for your compilation and deployment",
+      );
+    }
 
     if (effectRows) {
       return { id } as any;
