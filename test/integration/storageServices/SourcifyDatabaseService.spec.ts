@@ -4,9 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import { MockVerificationExport } from "../../helpers/mocks";
 import { resetDatabase } from "../../helpers/helpers";
 import sinon from "sinon";
-import * as signatureUtil from "../../../services/utils/signature-util";
 import { ConflictError } from "../../../common/errors";
-import { QueryTypes } from "sequelize";
 
 use(chaiAsPromised);
 
@@ -15,18 +13,6 @@ describe("SourcifyDatabaseService", function () {
   const sandbox = sinon.createSandbox();
 
   before(async () => {
-    process.env.SOURCIFY_POSTGRES_PORT =
-      process.env.DOCKER_HOST_POSTGRES_TEST_PORT || "5431";
-    if (
-      !process.env.SOURCIFY_POSTGRES_HOST ||
-      !process.env.SOURCIFY_POSTGRES_DB ||
-      !process.env.SOURCIFY_POSTGRES_USER ||
-      !process.env.SOURCIFY_POSTGRES_PASSWORD ||
-      !process.env.SOURCIFY_POSTGRES_PORT
-    ) {
-      throw new Error("Not all required environment variables set");
-    }
-
     databaseService = new StoreService(
       {
         host: process.env.MYSQL_HOST || "127.0.0.1",
