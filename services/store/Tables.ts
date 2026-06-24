@@ -186,12 +186,12 @@ export namespace Tables {
     creation_code_hash?: string;
     runtime_code_hash: string;
     creation_code_artifacts: {
-      sourceMap: Nullable<string>;
+      sourceMap: Nullable<string | VyperSourceMap>;
       linkReferences: Nullable<LinkReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
     runtime_code_artifacts: {
-      sourceMap: string | VyperSourceMap | null;
+      sourceMap: Nullable<string | VyperSourceMap>;
       linkReferences: Nullable<LinkReferences>;
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
@@ -884,7 +884,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   recompiled_creation_code:
     "nullif(CONVERT(recompiled_creation_code.code USING utf8), '0x') as recompiled_creation_code",
   creation_source_map:
-    "compiled_contracts.creation_code_artifacts->>'$.sourceMap' as creation_source_map",
+    "compiled_contracts.creation_code_artifacts->'$.sourceMap' as creation_source_map",
   creation_link_references:
     "compiled_contracts.creation_code_artifacts->'$.linkReferences' as creation_link_references",
   creation_cbor_auxdata:
@@ -896,7 +896,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   recompiled_runtime_code:
     "nullif(CONVERT(recompiled_runtime_code.code USING utf8), '0x') as recompiled_runtime_code",
   runtime_source_map:
-    "compiled_contracts.runtime_code_artifacts->>'$.sourceMap' as runtime_source_map",
+    "compiled_contracts.runtime_code_artifacts->'$.sourceMap' as runtime_source_map",
   runtime_link_references:
     "compiled_contracts.runtime_code_artifacts->'$.linkReferences' as runtime_link_references",
   runtime_cbor_auxdata:

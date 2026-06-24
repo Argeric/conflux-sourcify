@@ -74,19 +74,19 @@ export interface VerificationTestCase {
 }
 
 /*
- * This suite aims to provide a uniform way to test that specific edge cases
- * are verified and stored correctly in Sourcify. For example, this includes
- * that transformations are generated correctly and that contracts can still
- * be verified when certain compiler settings are changed. At the moment, it
- * tests for correct storage via querying the database directly and checking
- * the response of API v2. It is meant to be extensible for testing storage
- * on other storage services as well.
- *
- * Each test case takes an object in the form of the VerificationTestCase
- * interface as input. The logic deploys the contract on a local chain and
- * verifies it using API v2. After the verification is complete, it queries
- * and checks all relevant database columns and the API v2
- * /contract/{chainId}/{address} endpoint.
+ This suite aims to provide a uniform way to test that specific edge cases
+ are verified and stored correctly in Sourcify. For example, this includes
+ that transformations are generated correctly and that contracts can still
+ be verified when certain compiler settings are changed. At the moment, it
+ tests for correct storage via querying the database directly and checking
+ the response of API. It is meant to be extensible for testing storage
+ on other storage services as well.
+
+ Each test case takes an object in the form of the VerificationTestCase
+ interface as input. The logic deploys the contract on a local chain and
+ verifies it using API. After the verification is complete, it queries
+ and checks all relevant database columns and the API
+ /contract/{chainId}/{address} endpoint.
  */
 describe("Specific Verification Cases", function () {
   const chainFixture = new LocalChainFixture();
@@ -246,5 +246,12 @@ describe("Specific Verification Cases", function () {
       await import("./testdata/vyper/constructor_args_immutables.json")
     ).default as unknown as VerificationTestCase;
     await testVerificationCase(vyperTestConstructorArgumentsAndImmutables);
+  });
+
+  it("should store transientStorageLayout for a contract that uses the transient keyword", async () => {
+    const transientStorageLayout = (
+      await import("./testdata/transient_storage_layout.json")
+    ).default as unknown as VerificationTestCase;
+    await testVerificationCase(transientStorageLayout);
   });
 });

@@ -81,7 +81,7 @@ export async function assertDatabase(
   const resSources = await serverFixture.sourcifyDatabase.query(
     `SELECT
           ccs.*,
-          s.*
+          s.source_hash, CONVERT(s.content USING utf8mb4) as content
         FROM verified_contracts vc
         LEFT JOIN contract_deployments cd ON cd.id = vc.deployment_id
         LEFT JOIN compiled_contracts cc ON cc.id = vc.compilation_id
@@ -203,7 +203,7 @@ export async function assertDatabase(
 
   // verified_contracts columns
   chai
-    .expect(row.creation_match)
+    .expect(row.creation_match === 1)
     .to.deep.equal(testCase.verification.creationMatch !== null);
   chai
     .expect(row.creation_values)
@@ -212,10 +212,10 @@ export async function assertDatabase(
     .expect(row.creation_transformations)
     .to.deep.equal(testCase.verification.creationTransformations);
   chai
-    .expect(row.creation_metadata_match)
+    .expect(row.creation_metadata_match === 1)
     .to.equal(testCase.verification.creationMatch === "exact_match");
   chai
-    .expect(row.runtime_match)
+    .expect(row.runtime_match === 1)
     .to.deep.equal(testCase.verification.runtimeMatch !== null);
   chai
     .expect(row.runtime_values)
@@ -224,7 +224,7 @@ export async function assertDatabase(
     .expect(row.runtime_transformations)
     .to.deep.equal(testCase.verification.runtimeTransformations);
   chai
-    .expect(row.runtime_metadata_match)
+    .expect(row.runtime_metadata_match === 1)
     .to.equal(testCase.verification.runtimeMatch === "exact_match");
 
   // sourcify_matches columns
@@ -328,10 +328,10 @@ export async function assertApiV2Lookup(
     .to.equal(deploymentInfo.txHash);
   chai
     .expect(res.body.deployment.blockNumber)
-    .to.equal(deploymentInfo.blockNumber.toString());
+    .to.equal(deploymentInfo.blockNumber);
   chai
     .expect(res.body.deployment.transactionIndex)
-    .to.equal(deploymentInfo.txIndex.toString());
+    .to.equal(deploymentInfo.txIndex);
   chai.expect(res.body.deployment.deployer).to.equal(deployerAddress);
 
   // sources
