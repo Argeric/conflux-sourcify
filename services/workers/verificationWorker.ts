@@ -1,6 +1,6 @@
 import Piscina from "piscina";
 import {
-  SourcifyLibError,
+  SourcifyLibError
 } from "@ethereum-sourcify/lib-sourcify";
 import { resolve } from "path";
 import { SolcLocal } from "../compiler/SolcLocal";
@@ -17,10 +17,7 @@ import type {
   VerificationWorkerInput,
 } from "./workerTypes";
 import {
-  isVyperResult,
-  ProcessedConfluxscanResult,
-  processSolidityResultFromConfluxscan,
-  processVyperResultFromConfluxscan,
+  getCompilationFromEtherscanResult
 } from "../utils/confluxscan-util";
 import { asyncLocalStorage } from "../../common/async-context";
 import { Chain } from "../chain/Chain";
@@ -33,6 +30,7 @@ import { useAllSourcesAndReturnCompilation } from "../validation/processFiles";
 import logger from "../log/logger";
 import { createCompilationFromJsonInput } from '../utils/compilation';
 import { AnyCompilation } from '../compilation/CompilationTypes';
+import { VyperCompilation } from "../compilation/VyperCompilation";
 
 export const filename = resolve(__filename);
 
@@ -240,23 +238,25 @@ async function _verifyFromConfluxscan({
   address,
   confluxscanResult,
 }: VerifyFromConfluxscanInput): Promise<VerifyOutput> {
-  let processedResult: ProcessedConfluxscanResult;
-  if (isVyperResult(confluxscanResult)) {
-    processedResult =
-      await processVyperResultFromConfluxscan(confluxscanResult);
-  } else {
-    processedResult = processSolidityResultFromConfluxscan(confluxscanResult);
+  let compilation: SolidityCompilation | VyperCompilation;
+  try {
+    compilation = await getCompilationFromEtherscanResult(
+      confluxscanResult,
+      solc,
+      vyper,
+    );
+  } catch (error: any) {
+    return {
+      errorExport: createErrorExport(error),
+    };
   }
 
   return _verifyFromJsonInput({
     chainId,
     address,
-    jsonInput: processedResult.jsonInput,
-    compilerVersion: processedResult.compilerVersion,
-    compilationTarget: {
-      name: processedResult.contractName,
-      path: processedResult.contractPath,
-    },
+    jsonInput: compilation.jsonInput,
+    compilerVersion: compilation.compilerVersion,
+    compilationTarget: compilation.compilationTarget,
   });
 }
 

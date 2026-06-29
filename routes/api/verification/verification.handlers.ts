@@ -72,8 +72,8 @@ export async function verifyFromJsonInputEndpoint(
       req.body.stdJsonInput,
       _.trimStart(req.body.compilerVersion, "v"),
       compilationTarget,
-      req.body.constructorArguments,
       req.body.creationTransactionHash,
+      req.body.constructorArguments,
       req.body.licenseType,
       req.body.contractLabel,
     );

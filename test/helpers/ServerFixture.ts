@@ -1,6 +1,8 @@
 import { resetDatabase } from "./helpers";
-import { Server } from "../../server";
+import { Server, ServerOptions } from "../../server";
 import { SolcLocal } from "../../services/compiler/SolcLocal";
+import { VyperLocal } from "../../services/compiler/VyperLocal";
+import { FeLocal } from "../../services/compiler/FeLocal";
 import { loadConfig } from "../../config/Loader";
 import { ChainMap } from "../../server";
 import { Chain } from "../../services/chain/Chain";
@@ -40,24 +42,25 @@ export class ServerFixture {
   constructor(fixtureOptions_?: Partial<ServerFixtureOptions>) {
     before(async () => {
       const config = loadConfig();
-      const solc = new SolcLocal(
-        config.solc.solcBinRepo,
-        config.solc.solcJsRepo,
-      );
+
       const chainMap: ChainMap = {};
       for (const chainObj of Object.values(config.chains)) {
         chainMap[chainObj.chainId.toString()] = new Chain(chainObj);
       }
       const chains = fixtureOptions_?.chains || chainMap;
 
+      const serverOptions: ServerOptions = {
+        port: config.server.port,
+        maxFileSize: config.server.maxFileSize,
+        enableProfile: config.server.enableProfile,
+        chains,
+        solc: new SolcLocal(config.solc.solcBinRepo, config.solc.solcJsRepo),
+        vyper: new VyperLocal(config.vyper.vyperRepo),
+        fe: new FeLocal(config.fe.feRepo),
+      };
+
       this._server = new Server(
-        {
-          port: config.server.port,
-          maxFileSize: config.server.maxFileSize,
-          enableProfile: config.server.enableProfile,
-          chains,
-          solc,
-        },
+        serverOptions,
         {
           chains,
           solcRepoPath: config.solc.solcBinRepo,

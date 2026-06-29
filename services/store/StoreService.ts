@@ -863,6 +863,7 @@ export class StoreService extends StoreBase implements RWStorageService {
     if (!result) {
       throw new Error("Failed to insert verification job");
     }
+
     return result.id;
   }
 

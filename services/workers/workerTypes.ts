@@ -21,6 +21,9 @@ export interface VerifyFromJsonInput extends VerificationWorkerInput {
   compilerVersion: string;
   compilationTarget: CompilationTarget;
   creationTransactionHash?: string;
+  constructorArguments?: string
+  licenseType?: number,
+  contractLabel?: string,
 }
 
 export interface VerifyFromMetadataInput extends VerificationWorkerInput {

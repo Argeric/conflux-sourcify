@@ -5,6 +5,8 @@ export function getCompilerNameFromLanguage(language: string): string {
       return "solc";
     case "vyper":
       return "vyper";
+    case "fe":
+      return "fe";
     default:
       throw new Error("Language not supported");
   }

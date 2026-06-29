@@ -6,7 +6,9 @@ import {
   checkIfAlreadyVerified,
   checkIfJobIsAlreadyRunning,
   validateStandardJsonInput,
-  validateAndNormalizeFeInput, validateCompilerVersion, validateSources
+  validateAndNormalizeFeInput,
+  validateCompilerVersion,
+  validateSources
 } from "../middlewares";
 import {
   verifyFromJsonInputEndpoint,
