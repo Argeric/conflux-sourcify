@@ -7,11 +7,11 @@ import type {
   ImmutableReferences,
   LinkReferences,
 } from '@ethereum-sourcify/compilers-types';
-import type {
+import {
   CompilationLanguage,
   CompilationTarget,
   IFeCompiler,
-} from './CompilationTypes';
+} from "@ethereum-sourcify/lib-sourcify";
 
 /**
  * Abstraction of a Fe compilation.

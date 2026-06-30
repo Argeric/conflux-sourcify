@@ -28,10 +28,8 @@ describe("VerificationService", function() {
   function createMockStorageService(testVerificationId: string) {
     const mockStorageService = {
       storeVerificationJob: () => {
-        console.log(`call storeVerificationJob ===`)
       },
       setJobError: () => {
-        console.log(`call setJobError ===`)
       }
     } as any;
 

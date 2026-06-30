@@ -60,7 +60,6 @@ const initWorker = () => {
     Piscina.workerData.solcRepoPath,
     Piscina.workerData.solJsonRepoPath,
   );
-
   vyper = new VyperLocal(Piscina.workerData.vyperRepoPath);
   fe = new FeLocal(Piscina.workerData.feRepoPath);
 };

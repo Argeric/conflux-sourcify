@@ -248,10 +248,86 @@ describe("Specific Verification Cases", function () {
     await testVerificationCase(vyperTestConstructorArgumentsAndImmutables);
   });
 
+  it("should partially match when deployed bytecodeHash none is verified with standard metadata", async () => {
+    const vyperTestConstructorArgumentsAndImmutables = (
+      await import("./testdata/onchain_bytecode_hash_none_compiled_standard.json")
+    ).default as unknown as VerificationTestCase;
+    await testVerificationCase(vyperTestConstructorArgumentsAndImmutables);
+  });
+
+  it("should partially match when deployed appendCBOR false is verified with standard metadata", async () => {
+    const vyperTestConstructorArgumentsAndImmutables = (
+      await import("./testdata/onchain_append_cbor_false_compiled_standard.json")
+    ).default as unknown as VerificationTestCase;
+    await testVerificationCase(vyperTestConstructorArgumentsAndImmutables);
+  });
+
+  it("should partially match when deployed appendCBOR false is verified with metadata bytecodeHash none", async () => {
+    const vyperTestConstructorArgumentsAndImmutables = (
+      await import("./testdata/onchain_append_cbor_false_compiled_bytecode_hash_none.json")
+    ).default as unknown as VerificationTestCase;
+    await testVerificationCase(vyperTestConstructorArgumentsAndImmutables);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.1.3", async () => {
+    const matchSol0_1_3 = (await import("./testdata/match_sol_0_1_3.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_1_3);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.1.6", async () => {
+    const matchSol0_1_6 = (await import("./testdata/match_sol_0_1_6.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_1_6);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.3.6", async () => {
+    const matchSol0_3_6 = (await import("./testdata/match_sol_0_3_6.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_3_6);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.4.0", async () => {
+    const matchSol0_4_0 = (await import("./testdata/match_sol_0_4_0.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_4_0);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.4.7", async () => {
+    const matchSol0_4_7 = (await import("./testdata/match_sol_0_4_7.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_4_7);
+  });
+
+  it("should partially match a contract compiled with Solidity 0.4.9", async () => {
+    const matchSol0_4_9 = (await import("./testdata/match_sol_0_4_9.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(matchSol0_4_9);
+  });
+
   it("should store transientStorageLayout for a contract that uses the transient keyword", async () => {
     const transientStorageLayout = (
       await import("./testdata/transient_storage_layout.json")
     ).default as unknown as VerificationTestCase;
     await testVerificationCase(transientStorageLayout);
+  });
+
+  it("should verify a multi-source Solidity contract without duplicating signatures", async () => {
+    const multiSourceSolidity = (
+      await import("./testdata/multi_source_solidity.json")
+    ).default as unknown as VerificationTestCase;
+    await testVerificationCase(multiSourceSolidity);
+  });
+
+  it("should verify a single-file Fe contract", async () => {
+    const feTestSingleFile = (await import("./testdata/fe/single_file.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(feTestSingleFile);
+  });
+
+  it("should verify a multi-file Fe ingot", async () => {
+    const feTestMultiFile = (await import("./testdata/fe/multi_file.json"))
+      .default as unknown as VerificationTestCase;
+    await testVerificationCase(feTestMultiFile);
   });
 });

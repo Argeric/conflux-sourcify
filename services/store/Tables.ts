@@ -23,6 +23,7 @@ import {
 } from "../../routes/types";
 import { JsonFragment, keccak256 } from 'ethers';
 import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
+import { getCompilerNameFromLanguage } from "../utils/database-util";
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
 
@@ -1296,19 +1297,6 @@ export async function getDatabaseColumnsFromVerification(
     }),
   );
 
-  let compiler;
-  switch (verification.compilation.language.toLocaleLowerCase()) {
-    case "yul":
-    case "solidity":
-      compiler = "solc";
-      break;
-    case "vyper":
-      compiler = "vyper";
-      break;
-    default:
-      throw new Error("Language not supported");
-  }
-
   return {
     recompiledCreationCode,
     recompiledRuntimeCode: {
@@ -1330,7 +1318,7 @@ export async function getDatabaseColumnsFromVerification(
     },
     compiledContract: {
       language: verification.compilation.language.toLocaleLowerCase(),
-      compiler,
+      compiler: getCompilerNameFromLanguage(verification.compilation.language),
       compiler_settings: prepareCompilerSettingsFromVerification(verification),
       name: verification.compilation.compilationTarget.name,
       version: verification.compilation.compilerVersion,

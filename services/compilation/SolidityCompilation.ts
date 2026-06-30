@@ -269,7 +269,11 @@ export class SolidityCompilation extends AbstractCompilation {
   public async compile(forceEmscripten = false) {
     const contract =
       await this.compileAndReturnCompilationTarget(forceEmscripten);
-    this._metadata = JSON.parse(contract.metadata?.trim() || "{}");
+    if (contract.metadata) {
+      this._metadata = JSON.parse(contract.metadata.trim());
+    } else {
+      this._metadata = undefined;
+    }
   }
 
   get immutableReferences(): ImmutableReferences {
