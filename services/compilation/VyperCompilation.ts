@@ -103,23 +103,31 @@ export class VyperCompilation extends AbstractCompilation {
   public compilerVersionCompatibleWithSemver: string;
 
   initVyperJsonInput() {
+    const outputs = [
+      'abi',
+      'ast',
+      'interface',
+      'ir',
+      'layout',
+      'userdoc',
+      'devdoc',
+      'evm.bytecode.object',
+      'evm.bytecode.opcodes',
+      'evm.deployedBytecode.object',
+      'evm.deployedBytecode.opcodes',
+      'evm.deployedBytecode.sourceMap',
+      'evm.methodIdentifiers',
+    ];
+
+    // evm.bytecode.sourceMap output selection is only supported since Vyper 0.4.0
+    if (gte(this.compilerVersionCompatibleWithSemver, '0.4.0')) {
+      outputs.push('evm.bytecode.sourceMap');
+    }
+
     const outputSelection = {
-      [this.compilationTarget.path]: [
-        "abi",
-        "ast",
-        "interface",
-        "ir",
-        "userdoc",
-        "devdoc",
-        "evm.bytecode.object",
-        "evm.bytecode.opcodes",
-        "evm.deployedBytecode.object",
-        "evm.deployedBytecode.opcodes",
-        "evm.deployedBytecode.sourceMap",
-        "evm.methodIdentifiers",
-      ],
+      [this.compilationTarget.path]: outputs,
     };
-    this.jsonInput.settings.outputSelection = outputSelection;
+    this.jsonInput.settings = { ...this.jsonInput.settings, outputSelection };
   }
 
   public constructor(

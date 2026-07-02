@@ -618,6 +618,7 @@ export class Dao {
       runtime_code_hash,
       creation_code_artifacts,
       runtime_code_artifacts,
+      additional_input,
     }: Omit<Tables.ICompiledContract, "id">,
     dbTx?: Transaction,
   ): Promise<Pick<Tables.ICompiledContract, "id">> {
@@ -625,6 +626,7 @@ export class Dao {
     const compilerSettings = JSON.stringify(compiler_settings); // to json
     const creationCodeArtifacts = JSON.stringify(creation_code_artifacts); // to json
     const runtimeCodeArtifacts = JSON.stringify(runtime_code_artifacts); // to json
+    const additionalInput = additional_input ? JSON.stringify(additional_input) : null; // to json
     const now = new Date();
     const [id, effectRows] = await this.pool.query(
       `
@@ -640,9 +642,10 @@ export class Dao {
         runtime_code_hash,
         creation_code_artifacts,
         runtime_code_artifacts,
+        additional_input,
         createdAt,
         updatedAt
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) 
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) 
         ON DUPLICATE KEY UPDATE
           compiler = values(compiler),
           language = values(language),
@@ -664,6 +667,7 @@ export class Dao {
           runtime_code_hash,
           creationCodeArtifacts,
           runtimeCodeArtifacts,
+          additionalInput,
           now,
           now,
         ],

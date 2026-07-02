@@ -26,12 +26,13 @@ import {
   CompilationTarget
 } from "@ethereum-sourcify/lib-sourcify";
 import {
-  FeOutputContract,
+  VyperJsonInput,
+  VyperOutputContract,
   ImmutableReferences,
-  Metadata,
   SolidityOutputContract,
+  FeOutputContract,
   SoliditySettings,
-  VyperOutputContract
+  Metadata
 } from "@ethereum-sourcify/compilers-types";
 import { AbstractCompilation } from "../compilation/AbstractCompilation";
 import { SolidityCompilation } from "../compilation/SolidityCompilation";
@@ -824,15 +825,20 @@ export class Verification {
           abi: contractCompilerOutput?.abi,
           userdoc: contractCompilerOutput?.userdoc,
           devdoc: contractCompilerOutput?.devdoc,
-          storageLayout: (contractCompilerOutput as SolidityOutputContract)
-            ?.storageLayout,
+          storageLayout:
+            (contractCompilerOutput as SolidityOutputContract)?.storageLayout ||
+            (contractCompilerOutput as VyperOutputContract)?.layout
+              ?.storage_layout,
           transientStorageLayout: (
             contractCompilerOutput as SolidityOutputContract
           )?.transientStorageLayout,
           evm: {
             bytecode: {
-              sourceMap: (contractCompilerOutput as SolidityOutputContract)?.evm
-                ?.bytecode?.sourceMap,
+              sourceMap: (
+                contractCompilerOutput as
+                  | SolidityOutputContract
+                  | VyperOutputContract
+              )?.evm?.bytecode?.sourceMap,
               linkReferences: (contractCompilerOutput as SolidityOutputContract)
                 ?.evm?.bytecode?.linkReferences,
             },
@@ -852,6 +858,14 @@ export class Verification {
         metadata,
         jsonInput: {
           settings: this.compilation.jsonInput.settings,
+          ...((this.compilation.jsonInput as VyperJsonInput)
+            .storage_layout_overrides
+            ? {
+              storageLayoutOverrides: (
+                this.compilation.jsonInput as VyperJsonInput
+              ).storage_layout_overrides,
+            }
+            : {}),
         },
         compilationTime: this.compilation.compilationTime,
       },
