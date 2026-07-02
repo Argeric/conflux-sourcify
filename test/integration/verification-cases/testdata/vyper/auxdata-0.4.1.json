@@ -98,7 +98,7 @@
     "metadata": null
   },
   "verification": {
-    "creationMatch": "match",
+    "creationMatch": "exact_match",
     "runtimeMatch": "match",
     "creationTransformations": [],
     "creationValues": {},
