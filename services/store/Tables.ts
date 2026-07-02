@@ -290,6 +290,7 @@ export namespace Tables {
               unique: true,
               fields: [
                 "compiler",
+                "version",
                 "language",
                 "creation_code_hash",
                 "runtime_code_hash",

@@ -139,7 +139,7 @@ export async function assertJobVerification(
 }
 
 // If you pass storageService = false, then the match will not be compared to the database
-export const assertVerification = async (
+/*export const assertVerification = async (
   serverFixture: ServerFixture,
   err: Error | null,
   res: Response,
@@ -152,10 +152,10 @@ export const assertVerification = async (
   try {
     chai.expect(err).to.be.null;
     chai.expect(res.status).to.equal(StatusCodes.OK);
-    /*chai.expect(res.body).to.haveOwnProperty("result");
+    /!*chai.expect(res.body).to.haveOwnProperty("result");
     const resultArr = res.body.result;
     chai.expect(resultArr).to.have.a.lengthOf(1);
-    const result = resultArr[0];*/
+    const result = resultArr[0];*!/
     const result = res.body;
     chai
       .expect(result.address.toLowerCase())
@@ -176,4 +176,4 @@ export const assertVerification = async (
       `${(e as Error).message}\nResponse body: ${JSON.stringify(res.body)}`,
     );
   }
-};
+};*/

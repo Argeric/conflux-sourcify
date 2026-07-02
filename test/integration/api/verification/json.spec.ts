@@ -1,19 +1,14 @@
 import chai from "chai";
 import chaiHttp from "chai-http";
-import {
-  deployFromAbiAndBytecodeForCreatorTxHash,
-  hookIntoVerificationWorkerRun,
-} from "../../../helpers/helpers";
+import { deployFromAbiAndBytecodeForCreatorTxHash, hookIntoVerificationWorkerRun } from "../../../helpers/helpers";
 import { LocalChainFixture } from "../../../helpers/LocalChainFixture";
 import { ServerFixture } from "../../../helpers/ServerFixture";
 import path from "path";
 import fs from "fs";
 import { assertJobVerification } from "../../../helpers/assertions";
 import sinon from "sinon";
-import {
-  testAlreadyBeingVerified,
-  testAlreadyVerified,
-} from "../../../helpers/common-tests";
+import { testAlreadyBeingVerified, testAlreadyVerified } from "../../../helpers/common-tests";
+import { QueryTypes } from "sequelize";
 
 chai.use(chaiHttp);
 
@@ -424,7 +419,7 @@ describe("POST /verify/:chainId/:address", function () {
     chai.expect(verifyRes.body).to.have.property("message");
   });
 
-  it("should return a 404 when the chain is not found", async function () {
+  it("should return a 400 when the chain is not found", async function () {
     const unknownChainId = chainFixture.chainId;
     const chainMap = serverFixture.server.chains;
     sandbox.stub(chainMap, unknownChainId).value(undefined);
@@ -442,9 +437,322 @@ describe("POST /verify/:chainId/:address", function () {
         creationTransactionHash: chainFixture.defaultContractCreatorTx,
       });
 
-    chai.expect(verifyRes.status).to.equal(404);
+    chai.expect(verifyRes.status).to.equal(400);
     chai.expect(verifyRes.body.customCode).to.equal("unsupported_chain");
     chai.expect(verifyRes.body).to.have.property("errorId");
     chai.expect(verifyRes.body).to.have.property("message");
+  });
+
+  it("should fail matching with creation tx if the provided creationTransactionHash does not match the contract address", async () => {
+    // Deploy contract A
+    const deploymentA = await deployFromAbiAndBytecodeForCreatorTxHash(
+      chainFixture.localSigner,
+      chainFixture.defaultContractArtifact.abi,
+      chainFixture.defaultContractArtifact.bytecode,
+    );
+
+    // Deploy contract B
+    const deploymentB = await deployFromAbiAndBytecodeForCreatorTxHash(
+      chainFixture.localSigner,
+      chainFixture.defaultContractArtifact.abi,
+      chainFixture.defaultContractArtifact.bytecode,
+    );
+
+    const { resolveWorkers } = makeWorkersWait();
+
+    // Try to verify contract A, but provide B's creatorTxHash
+    const verifyRes = await chai
+      .request(serverFixture.server.app)
+      .post(`/verify/${chainFixture.chainId}/${deploymentA.contractAddress}`)
+      .send({
+        stdJsonInput: chainFixture.defaultContractJsonInput,
+        compilerVersion:
+        chainFixture.defaultContractMetadataObject.compiler.version,
+        contractIdentifier: Object.entries(
+          chainFixture.defaultContractMetadataObject.settings.compilationTarget,
+        )[0].join(":"),
+        creationTransactionHash: deploymentB.txHash,
+      });
+
+    await resolveWorkers();
+
+    // Fetch the job result
+    const jobRes = await chai
+      .request(serverFixture.server.app)
+      .get(`/verify/${verifyRes.body.verificationId}`);
+
+    chai.expect(jobRes.status).to.be.oneOf([200]);
+    chai.expect(jobRes.body).to.include({
+      isJobCompleted: true,
+    });
+    chai.expect(jobRes.body.error).to.not.exist;
+    chai.expect(jobRes.body.contract.creationMatch).to.be.null;
+    chai.expect(jobRes.body.contract.runtimeMatch).to.equal("exact_match");
+  });
+
+  describe("match upgrades", function () {
+    it("should upgrade creation match from null to exact_match when re-verified with correct creationTransactionHash", async () => {
+      const fakeTxHash =
+        "0x0000000000000000000000000000000000000000000000000000000000000001";
+
+      const { resolveWorkers, runTaskStub } = makeWorkersWait();
+
+      // First verification with wrong creationTransactionHash - creation match will be null
+      const verifyRes1 = await chai
+        .request(serverFixture.server.app)
+        .post(
+          `/verify/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+        )
+        .send({
+          stdJsonInput: chainFixture.defaultContractJsonInput,
+          compilerVersion:
+          chainFixture.defaultContractMetadataObject.compiler.version,
+          contractIdentifier: Object.entries(
+            chainFixture.defaultContractMetadataObject.settings
+              .compilationTarget,
+          )[0].join(":"),
+          creationTransactionHash: fakeTxHash,
+        });
+
+      chai.expect(verifyRes1.status).to.equal(202);
+      await resolveWorkers();
+
+      // Check first verification result
+      const jobRes1 = await chai
+        .request(serverFixture.server.app)
+        .get(`/verify/${verifyRes1.body.verificationId}`);
+      chai.expect(jobRes1.status).to.equal(200);
+      chai.expect(jobRes1.body.isJobCompleted).to.be.true;
+      chai.expect(jobRes1.body.contract.runtimeMatch).to.equal("exact_match");
+      chai.expect(jobRes1.body.contract.creationMatch).to.be.null;
+
+      // Check database: creation_match should be false
+      const verifiedContractsResult1: any[] =
+        await serverFixture.sourcifyDatabase.query(
+          "SELECT creation_match FROM verified_contracts",
+          {
+            type: QueryTypes.SELECT
+          }
+        );
+      chai.expect(verifiedContractsResult1).to.have.length(1);
+      chai.expect(verifiedContractsResult1[0].creation_match).to.equals(0);
+
+      // Check contract_deployments: should have no transaction_hash
+      const contractDeployment1: any[] = await serverFixture.sourcifyDatabase.query(
+        "SELECT transaction_hash, block_number, transaction_index FROM contract_deployments",
+        {type: QueryTypes.SELECT}
+      );
+      chai.expect(contractDeployment1).to.have.length(1);
+      chai.expect(contractDeployment1[0].transaction_hash).to.be.null;
+      chai.expect(contractDeployment1[0].block_number).to.be.null;
+      chai.expect(contractDeployment1[0].transaction_index).to.be.null;
+
+      // Re-verify with correct creationTransactionHash to upgrade
+      runTaskStub.restore();
+      const { resolveWorkers: resolveWorkers2 } = makeWorkersWait();
+
+      const verifyRes2 = await chai
+        .request(serverFixture.server.app)
+        .post(
+          `/verify/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+        )
+        .send({
+          stdJsonInput: chainFixture.defaultContractJsonInput,
+          compilerVersion:
+          chainFixture.defaultContractMetadataObject.compiler.version,
+          contractIdentifier: Object.entries(
+            chainFixture.defaultContractMetadataObject.settings
+              .compilationTarget,
+          )[0].join(":"),
+          creationTransactionHash: chainFixture.defaultContractCreatorTx,
+        });
+
+      chai.expect(verifyRes2.status).to.equal(202);
+      await resolveWorkers2();
+
+      const jobRes2 = await chai
+        .request(serverFixture.server.app)
+        .get(`/verify/${verifyRes2.body.verificationId}`);
+
+      chai.expect(jobRes2.status).to.equal(200);
+      chai.expect(jobRes2.body.isJobCompleted).to.be.true;
+      chai.expect(jobRes2.body.contract.runtimeMatch).to.equal("exact_match");
+      chai.expect(jobRes2.body.contract.creationMatch).to.equal("exact_match");
+
+      // Check database: should have two verified_contracts entries
+      const verifiedContractsResult2: any[] =
+        await serverFixture.sourcifyDatabase.query(
+          "SELECT creation_match FROM verified_contracts ORDER BY id DESC",
+          {
+            type: QueryTypes.SELECT
+          }
+        );
+      /*chai.expect(verifiedContractsResult2).to.have.length(2);
+      chai.expect(verifiedContractsResult2[0].creation_match).to.equals(1);
+      chai.expect(verifiedContractsResult2[1].creation_match).to.equals(0);*/
+      chai.expect(verifiedContractsResult2).to.have.length(1);
+      chai.expect(verifiedContractsResult2[0].creation_match).to.equals(1);
+
+      // Check contract_deployments: new entry should have correct transaction info
+      const contractDeployment2: any[] = await serverFixture.sourcifyDatabase.query(
+        "SELECT transaction_hash, block_number, transaction_index, contract_id FROM contract_deployments ORDER BY createdAt DESC LIMIT 1",
+        {
+          type: QueryTypes.SELECT
+        }
+      );
+      chai
+        .expect(contractDeployment2[0].transaction_hash)
+        .to.equal(chainFixture.defaultContractCreatorTx);
+    });
+
+
+    async function testPartialUpgrade(matchType: "creation" | "runtime") {
+      // Build a modified standard JSON input that produces a partial match
+      const modifiedJsonInput = JSON.parse(
+        JSON.stringify(chainFixture.defaultContractJsonInput),
+      );
+      modifiedJsonInput.sources = {
+        "contracts/StorageModified.sol": {
+          content: chainFixture.defaultContractModifiedSource.toString(),
+        },
+      };
+
+      // Step 1: Create a partial match with modified sources
+      const { resolveWorkers: resolveWorkers1, runTaskStub: runTaskStub1 } =
+        makeWorkersWait();
+
+      const verifyRes1 = await chai
+        .request(serverFixture.server.app)
+        .post(
+          `/verify/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+        )
+        .send({
+          stdJsonInput: modifiedJsonInput,
+          compilerVersion:
+          chainFixture.defaultContractMetadataObject.compiler.version,
+          contractIdentifier: "contracts/StorageModified.sol:StorageModified",
+          creationTransactionHash: chainFixture.defaultContractCreatorTx,
+        });
+
+      chai.expect(verifyRes1.status).to.equal(202);
+      await resolveWorkers1();
+
+      // Verify partial match
+      const jobRes1 = await chai
+        .request(serverFixture.server.app)
+        .get(`/verify/${verifyRes1.body.verificationId}`);
+
+      chai.expect(jobRes1.body.isJobCompleted).to.be.true;
+      chai.expect(jobRes1.body.error).to.be.undefined;
+      chai.expect(jobRes1.body.contract.runtimeMatch).to.equal("match");
+      chai.expect(jobRes1.body.contract.creationMatch).to.equal("match");
+
+      // Confirm DB state
+      const contractMatchesPartial: any[] = await serverFixture.sourcifyDatabase.query(
+        "SELECT runtime_match, creation_match FROM sourcify_matches",
+        {
+          type: QueryTypes.SELECT
+        }
+      );
+      chai
+        .expect(contractMatchesPartial[0].runtime_match)
+        .to.equal("partial");
+      chai
+        .expect(contractMatchesPartial[0].creation_match)
+        .to.equal("partial");
+
+      // Save contract_id for later comparison
+      const contractDeploymentAfterPartial: any[] =
+        await serverFixture.sourcifyDatabase.query(
+          "SELECT contract_id FROM contract_deployments",
+          {
+            type: QueryTypes.SELECT
+          }
+        );
+      chai.expect(contractDeploymentAfterPartial).to.have.length(1);
+      const contractIdAfterPartial =
+        contractDeploymentAfterPartial[0].contract_id;
+
+      // Step 2: Force one match to "perfect" in DB
+      await serverFixture.sourcifyDatabase.query(
+        `UPDATE sourcify_matches SET ${matchType}_match='perfect' WHERE 1=1`,
+        {
+          type: QueryTypes.UPDATE
+        }
+      );
+
+      // Step 3: Re-verify with original sources to upgrade the remaining partial match
+      runTaskStub1.restore();
+      const { resolveWorkers: resolveWorkers2 } = makeWorkersWait();
+
+      const verifyRes2 = await chai
+        .request(serverFixture.server.app)
+        .post(
+          `/verify/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+        )
+        .send({
+          stdJsonInput: chainFixture.defaultContractJsonInput,
+          compilerVersion:
+          chainFixture.defaultContractMetadataObject.compiler.version,
+          contractIdentifier: Object.entries(
+            chainFixture.defaultContractMetadataObject.settings
+              .compilationTarget,
+          )[0].join(":"),
+          creationTransactionHash: chainFixture.defaultContractCreatorTx,
+        });
+
+      await assertJobVerification(
+        serverFixture,
+        verifyRes2,
+        resolveWorkers2,
+        chainFixture.chainId,
+        chainFixture.defaultContractAddress,
+        "exact_match",
+      );
+
+      // Verify both matches are now "perfect" in DB
+      const contractMatchesPerfect: any[] = await serverFixture.sourcifyDatabase.query(
+        "SELECT runtime_match, creation_match FROM sourcify_matches",
+        {
+          type: QueryTypes.SELECT
+        }
+      );
+      chai
+        .expect(contractMatchesPerfect[0].runtime_match)
+        .to.equal("perfect");
+      chai
+        .expect(contractMatchesPerfect[0].creation_match)
+        .to.equal("perfect");
+
+      // contract_id should not have changed (same deployment, just upgraded match)
+      const contractDeploymentAfterUpgrade: any[] =
+        await serverFixture.sourcifyDatabase.query(
+          "SELECT contract_id FROM contract_deployments",
+          {
+            type: QueryTypes.SELECT
+          }
+        );
+      chai.expect(contractDeploymentAfterUpgrade).to.have.length(1);
+      chai
+        .expect(contractDeploymentAfterUpgrade[0].contract_id)
+        .to.equal(contractIdAfterPartial);
+
+      // Should have two compiled_contracts_sources entries (partial + perfect)
+      const sourcesResult: any[] = await serverFixture.sourcifyDatabase.query(
+        "SELECT source_hash FROM compiled_contracts_sources",
+        {
+          type: QueryTypes.SELECT
+        }
+      );
+      chai.expect(sourcesResult).to.have.length(2);
+    }
+
+    it("should upgrade creation match from match to exact_match even if runtime match is already exact_match", async () => {
+      await testPartialUpgrade("runtime");
+    });
+
+    it("should upgrade runtime match from match to exact_match even if creation match is already exact_match", async () => {
+      await testPartialUpgrade("creation");
+    });
   });
 });

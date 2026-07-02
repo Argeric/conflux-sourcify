@@ -502,8 +502,15 @@ export class Dao {
         updatedAt
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
-        compilation_id = values(compilation_id),
-        deployment_id = values(deployment_id)
+         creation_transformations = values(creation_transformations),
+         creation_values = values(creation_values),
+         runtime_transformations = values(runtime_transformations),
+         runtime_values = values(runtime_values),
+         runtime_match = values(runtime_match),
+         creation_match = values(creation_match),
+         runtime_metadata_match = values(runtime_metadata_match),
+         creation_metadata_match = values(creation_metadata_match),
+         updatedAt = now()
       `,
       {
         type: QueryTypes.INSERT,
@@ -511,9 +518,6 @@ export class Dao {
         replacements: [
           compilation_id,
           deployment_id,
-          // transformations needs to be converted to string as a workaround:
-          // arrays are not treated as jsonb types by pg module
-          // then they are correctly stored as jsonb by postgresql
           creationTransformations,
           creationValues,
           runtimeTransformations,
@@ -647,10 +651,14 @@ export class Dao {
         updatedAt
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) 
         ON DUPLICATE KEY UPDATE
-          compiler = values(compiler),
-          language = values(language),
-          creation_code_hash = values(creation_code_hash),
-          runtime_code_hash = values(runtime_code_hash)
+           name = values(name),
+           fully_qualified_name = values(fully_qualified_name),
+           compilation_artifacts = values(compilation_artifacts),
+           compiler_settings = values(compiler_settings),
+           creation_code_artifacts = values(creation_code_artifacts),
+           runtime_code_artifacts = values(runtime_code_artifacts),
+           additional_input = values(additional_input),
+           updatedAt = now()
       `,
       {
         type: QueryTypes.INSERT,
@@ -866,9 +874,12 @@ export class Dao {
         updatedAt
       ) VALUES (?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
-         chain_id = values(chain_id),
-         address = values(address),
-         transaction_hash = values(transaction_hash)
+         contract_id = values(contract_id),
+         block_number = values(block_number),
+         transaction_hash = values(transaction_hash),
+         transaction_index = values(transaction_index),
+         deployer = values(deployer),
+         updatedAt = now()
       `,
       {
         type: QueryTypes.INSERT,
@@ -913,51 +924,6 @@ export class Dao {
     );
 
     return records[0] as any;
-  }
-
-  async updateContractDeployment({
-    id,
-    transaction_hash,
-    block_number,
-    transaction_index,
-    deployer,
-    contract_id,
-  }: Omit<Tables.IContractDeployment, "chain_id" | "address">) {
-    const result = await this.pool.query(
-      `
-        UPDATE contract_deployments 
-         SET 
-           transaction_hash = ?,
-           block_number = ?,
-           transaction_index = ?,
-           deployer = ?,
-           contract_id = ?
-         WHERE id = ?
-       `,
-      {
-        type: QueryTypes.UPDATE,
-        replacements: [
-          transaction_hash,
-          block_number,
-          transaction_index,
-          deployer,
-          contract_id,
-          id,
-        ],
-      },
-    );
-
-    // effectRows
-    if (result[1]) {
-      return {
-        id,
-        transaction_hash,
-        block_number,
-        transaction_index,
-        deployer,
-        contract_id,
-      } as any;
-    }
   }
 
   async getContractDeploymentByRuntimeCodeHash(
