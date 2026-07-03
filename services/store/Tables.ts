@@ -1356,13 +1356,7 @@ export async function getDatabaseColumnsFromVerification(
       compilation_artifacts: compilationArtifacts,
       creation_code_artifacts: creationCodeArtifacts,
       runtime_code_artifacts: runtimeCodeArtifacts,
-      additional_input: verification.compilation.jsonInput
-        .storageLayoutOverrides
-        ? {
-          storage_layout_overrides:
-          verification.compilation.jsonInput.storageLayoutOverrides,
-        }
-        : null,
+      additional_input: verification.compilation.additionalInput ?? null,
     },
     sourcesInformation,
     verifiedContract: {
