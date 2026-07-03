@@ -28,10 +28,10 @@
     "verification"
   ],
   "dependencies": {
-    "@ethereum-sourcify/bytecode-utils": "^1.5.0",
+    "@ethereum-sourcify/bytecode-utils": "^1.5.1",
     "@ethereum-sourcify/compilers": "^1.1.1",
     "@ethereum-sourcify/compilers-types": "^1.2.0",
-    "@ethereum-sourcify/lib-sourcify": "^3.5.0",
+    "@ethereum-sourcify/lib-sourcify": "^3.5.1",
     "@shazow/whatsabi": "^0.25.0",
     "@solidity-parser/parser": "0.20.1",
     "abitype": "1.0.8",
