@@ -4,7 +4,7 @@ import {
   decode,
   splitAuxdata,
 } from "@ethereum-sourcify/bytecode-utils";
-import semver, { gte } from "semver";
+import semver, { lt, gt, gte } from "semver";
 import {
   VyperJsonInput,
   VyperOutput,
@@ -34,6 +34,23 @@ export function returnFixedVyperVersion(compilerVersion: string): string {
       throw new CompilationError({ code: 'invalid_compiler_version' });
     }
   }
+}
+
+// evm.bytecode.sourceMap is supported from 0.4.0rc4 onwards.
+// compilerVersionCompatibleWithSemver strips the rc/b suffix, so all 0.4.0
+// variants look the same to semver — we must inspect the raw version for that
+// specific boundary.
+export function supportsCreationBytecodeSourceMap(
+  compilerVersion: string,
+  compatibleVersion: string,
+): boolean {
+  if (gt(compatibleVersion, '0.4.0')) return true;
+  if (lt(compatibleVersion, '0.4.0')) return false;
+  // Exactly 0.4.0 — inspect the original version string
+  if (/0\.4\.0b\d+/.test(compilerVersion)) return false;
+  const rcMatch = compilerVersion.match(/0\.4\.0rc(\d+)/);
+  if (rcMatch) return parseInt(rcMatch[1]) >= 4;
+  return true; // stable 0.4.0
 }
 
 export function returnAuxdataStyle(
@@ -119,8 +136,24 @@ export class VyperCompilation extends AbstractCompilation {
       'evm.methodIdentifiers',
     ];
 
-    // evm.bytecode.sourceMap output selection is only supported since Vyper 0.4.0
-    if (gte(this.compilerVersionCompatibleWithSemver, '0.4.0')) {
+    // userdoc and devdoc are only supported from 0.2.0 onwards
+    if (gte(this.compilerVersionCompatibleWithSemver, '0.2.0')) {
+      outputs.push('userdoc');
+      outputs.push('devdoc');
+    }
+
+    // layout is only supported from 0.4.1 onwards (including betas and rcs)
+    if (gte(this.compilerVersionCompatibleWithSemver, '0.4.1')) {
+      outputs.push('layout');
+    }
+
+    // evm.bytecode.sourceMap is only supported from 0.4.0rc4 onwards
+    if (
+      supportsCreationBytecodeSourceMap(
+        this.compilerVersion,
+        this.compilerVersionCompatibleWithSemver,
+      )
+    ) {
       outputs.push('evm.bytecode.sourceMap');
     }
 
