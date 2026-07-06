@@ -121,7 +121,7 @@ export class SolidityCompilation extends AbstractCompilation {
             '1': {
               offset:
                 this.runtimeBytecode.substring(2).length / 2 -
-                parseInt(runtimeCborLengthHex, 16) -
+                parseInt(runtimeCborLengthHex as string, 16) -
                 2, // bytecode has 2 bytes of cbor length prefix at the end
               value: `0x${auxdataFromRawRuntimeBytecode}`,
             },
@@ -144,7 +144,7 @@ export class SolidityCompilation extends AbstractCompilation {
             '1': {
               offset:
                 this.creationBytecode.substring(2).length / 2 -
-                parseInt(creationCborLengthHex, 16) -
+                parseInt(creationCborLengthHex as string, 16) -
                 2, // bytecode has 2 bytes of cbor length prefix at the end
               value: `0x${auxdataFromRawCreationBytecode}`,
             },
@@ -187,7 +187,7 @@ export class SolidityCompilation extends AbstractCompilation {
           "1": {
             offset:
               this.runtimeBytecode.substring(2).length / 2 -
-              parseInt(runtimeCborLengthHex, 16) -
+              parseInt(runtimeCborLengthHex as string, 16) -
               2, // bytecode has 2 bytes of cbor length prefix at the end
             value: `0x${auxdataFromRawRuntimeBytecode}`,
           },
@@ -207,7 +207,7 @@ export class SolidityCompilation extends AbstractCompilation {
             "1": {
               offset:
                 this.creationBytecode.substring(2).length / 2 -
-                parseInt(creationCborLengthHex, 16) -
+                parseInt(creationCborLengthHex as string, 16) -
                 2, // bytecode has 2 bytes of cbor length prefix at the end
               value: `0x${auxdataFromRawCreationBytecode}`,
             },
@@ -261,7 +261,7 @@ export class SolidityCompilation extends AbstractCompilation {
   public async compile(forceEmscripten = false) {
     const contract =
       await this.compileAndReturnCompilationTarget(forceEmscripten);
-    this._metadata = JSON.parse(contract.metadata.trim());
+    this._metadata = JSON.parse(contract.metadata?.trim() || "{}");
   }
 
   get immutableReferences(): ImmutableReferences {

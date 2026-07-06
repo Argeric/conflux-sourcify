@@ -1,15 +1,21 @@
-import { ContractCreationFetcher } from "@ethereum-sourcify/lib-sourcify";
 import { StatusCodes } from "http-status-codes";
 import { Chain } from "../chain/Chain";
 import { format } from "js-conflux-sdk";
 import axios, { HttpStatusCode } from "axios";
-import { ConfluxscanRequestFailedError } from "../../routes/api/errors";
 import logger from "../log/logger";
 
 const CONFLUXSCAN_REGEX = ["at txn.*href=.*/tx/(0x.{64})"]; // save as string to be able to return the txRegex in /chains response. If stored as RegExp returns {}
 const CONFLUXSCAN_SUFFIX = "address/${ADDRESS}";
 const CONFLUXSCAN_API_SUFFIX = `/api?module=contract&action=getcontractcreation&contractaddresses=\${ADDRESS}&apikey=`;
 const CONFLUXSCAN_CORE_API_SUFFIX = `/contract/getContractCreation?contractaddresses=\${ADDRESS}&apikey=`;
+
+interface ContractCreationFetcher {
+  type: "scrape" | "api";
+  url: string;
+  maskedUrl?: string;
+  responseParser?: Function;
+  scrapeRegex?: string[];
+}
 
 function getConfluxscanScrapeContractCreatorFetcher(
   apiURL: string

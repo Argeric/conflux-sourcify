@@ -610,7 +610,7 @@ export class Verification {
         extractConstructorArgumentsTransformation(
           matchBytecodesResult.populatedRecompiledBytecode,
           this.onchainCreationBytecode,
-          this.compilation.metadata,
+          this.compilation.contractCompilerOutput?.abi || [],
         );
       this.creationTransformations = [
         ...matchBytecodesResult.transformations,
@@ -709,7 +709,7 @@ export class Verification {
         this.compilation.compilerOutput.sources,
       )) {
         compilerOutputSources[source] = {
-          id: this.compilation.compilerOutput.sources[source].id,
+          id: this.compilation.compilerOutput.sources[source].id as number,
         };
       }
     }

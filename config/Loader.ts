@@ -1,10 +1,10 @@
 import defaultConfig from "./Config";
-import { SourcifyChainInstance } from "@ethereum-sourcify/lib-sourcify";
+import { SourcifyChainInstance, TraceSupport } from '@ethereum-sourcify/lib-sourcify';
 import { Options } from "sequelize";
 import {
   FetchContractCreationTxMethods,
-  FetchRequestRPC,
-} from "@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes";
+  FetchRequestRPC, SourcifyRpc,
+} from '@ethereum-sourcify/lib-sourcify/build/main/SourcifyChain/SourcifyChainTypes';
 import { Conflux } from "js-conflux-sdk";
 import { AlertConfig } from "../services/alert/types";
 import { initAlertMgrFromConfig } from "../services/alert/manager";
@@ -23,7 +23,7 @@ export interface Config {
 }
 
 export type ChainInstance = SourcifyChainInstance & {
-  rpc: Array<string | FetchRequestRPC | Conflux.ConfluxOption>;
+  rpcs: Rpc[];
   corespace?: boolean;
   confluxscanApi?: {
     apiURL: string;
@@ -40,6 +40,10 @@ export interface FetchContractCreationTxUsing
   confluxscanScrape?: {
     url: string;
   };
+}
+
+export type Rpc = SourcifyRpc & {
+  rpc: string | FetchRequestRPC | Conflux.ConfluxOption;
 }
 
 export function isConfluxOption(obj: any): obj is Conflux.ConfluxOption {

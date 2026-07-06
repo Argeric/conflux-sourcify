@@ -136,7 +136,7 @@ export class LocalChainFixture {
       this.hardhatNodeProcess = await startHardhatNetwork(HARDHAT_PORT);
 
       const ethersNetwork = new Network(
-        localChain.rpc[0] as string,
+        localChain.rpcs[0].rpc as string,
         localChain.chainId,
       );
       this._localSigner = await new JsonRpcProvider(

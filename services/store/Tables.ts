@@ -15,14 +15,14 @@ import {
   SolidityOutputContract,
   SoliditySettings,
   VyperSettings,
-  SourcifyLibErrorData,
-} from "@ethereum-sourcify/lib-sourcify";
+  SourcifyLibErrorData, VyperSourceMap,
+} from '@ethereum-sourcify/lib-sourcify';
 import { Abi } from "abitype";
 import {
   VerifiedContract as VerifiedContractApiObject,
   Nullable,
 } from "../../routes/types";
-import { keccak256 } from "ethers";
+import { JsonFragment, keccak256 } from 'ethers';
 import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
@@ -173,11 +173,13 @@ export namespace Tables {
     name: string;
     fully_qualified_name: string;
     compilation_artifacts: {
-      abi: Nullable<Abi>;
+      abi: Nullable<JsonFragment[]>;
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
+      methodIdentifiers?: Nullable<any>;
+      ir?: any;
     };
     compiler_settings: Omit<
       SoliditySettings | VyperSettings,
@@ -191,7 +193,7 @@ export namespace Tables {
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
     runtime_code_artifacts: {
-      sourceMap: Nullable<string>;
+      sourceMap: string | VyperSourceMap | null;
       linkReferences: Nullable<LinkReferences>;
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
@@ -208,11 +210,13 @@ export namespace Tables {
     name!: string;
     fully_qualified_name!: string;
     compilation_artifacts!: {
-      abi: Nullable<Abi>;
+      abi: Nullable<JsonFragment[]>;
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
+      methodIdentifiers?: Nullable<any>;
+      ir?: any;
     };
     compiler_settings!: Omit<
       SoliditySettings | VyperSettings,
@@ -1273,6 +1277,19 @@ export async function getDatabaseColumnsFromVerification(
     }),
   );
 
+  let compiler;
+  switch (verification.compilation.language.toLocaleLowerCase()) {
+    case "yul":
+    case "solidity":
+      compiler = "solc";
+      break;
+    case "vyper":
+      compiler = "vyper";
+      break;
+    default:
+      throw new Error("Language not supported");
+  }
+
   return {
     recompiledCreationCode,
     recompiledRuntimeCode: {
@@ -1294,10 +1311,7 @@ export async function getDatabaseColumnsFromVerification(
     },
     compiledContract: {
       language: verification.compilation.language.toLocaleLowerCase(),
-      compiler:
-        verification.compilation.language.toLocaleLowerCase() === "solidity"
-          ? "solc"
-          : "vyper",
+      compiler,
       compiler_settings: prepareCompilerSettingsFromVerification(verification),
       name: verification.compilation.compilationTarget.name,
       version: verification.compilation.compilerVersion,
