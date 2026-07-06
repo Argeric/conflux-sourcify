@@ -22,18 +22,18 @@ import {
   VerificationError,
   VerificationExport,
   VerificationStatus,
+  CompilationTarget
 } from "@ethereum-sourcify/lib-sourcify";
-import { CompilationTarget } from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/CompilationTypes";
 import {
+  FeOutputContract,
   ImmutableReferences,
   Metadata,
   SolidityOutputContract,
   SoliditySettings,
-  VyperOutputContract,
+  VyperOutputContract
 } from "@ethereum-sourcify/compilers-types";
 import { AbstractCompilation } from "../compilation/AbstractCompilation";
 import { SolidityCompilation } from "../compilation/SolidityCompilation";
-import { VyperCompilation } from "../compilation/VyperCompilation";
 import {
   blueprintDeployerBytecode,
   parseBlueprintPreamble,
@@ -704,19 +704,30 @@ export class Verification {
 
     let compilerOutputSources: Record<string, { id: number }> | undefined;
     if (this.compilation.compilerOutput?.sources) {
-      compilerOutputSources = {};
-      for (const source of Object.keys(
-        this.compilation.compilerOutput.sources,
-      )) {
-        compilerOutputSources[source] = {
-          id: this.compilation.compilerOutput.sources[source].id as number,
-        };
+      if (
+        this.compilation.language === 'Solidity' &&
+        lt(this.compilation.compilerVersion, '0.3.6')
+      ) {
+        // In Solidity versions < 0.3.6 there is no id in sources
+        compilerOutputSources = undefined;
+      } else {
+        compilerOutputSources = {};
+        for (const source of Object.keys(
+          this.compilation.compilerOutput.sources,
+        )) {
+          const id = this.compilation.compilerOutput.sources[source].id;
+          compilerOutputSources[source] = {
+            // In older solidity versions, source ids were strings, so we parse them to numbers
+            id: typeof id === 'number' ? id : parseInt(id, 10),
+          };
+        }
       }
     }
 
     let contractCompilerOutput:
       | SolidityOutputContract
       | VyperOutputContract
+      | FeOutputContract
       | undefined;
     try {
       contractCompilerOutput = this.compilation.contractCompilerOutput;
@@ -788,6 +799,9 @@ export class Verification {
           devdoc: contractCompilerOutput?.devdoc,
           storageLayout: (contractCompilerOutput as SolidityOutputContract)
             ?.storageLayout,
+          transientStorageLayout: (
+            contractCompilerOutput as SolidityOutputContract
+          )?.transientStorageLayout,
           evm: {
             bytecode: {
               sourceMap: (contractCompilerOutput as SolidityOutputContract)?.evm

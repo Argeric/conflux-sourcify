@@ -1,7 +1,9 @@
 import {
+  ISolidityCompiler,
+  IVyperCompiler,
   SolidityJsonInput,
   Sources,
-  VyperJsonInput,
+  VyperJsonInput
 } from "@ethereum-sourcify/lib-sourcify";
 import {
   ChainNotFoundError,
@@ -14,6 +16,8 @@ import SolidityParser from "@solidity-parser/parser";
 import { Chain } from "../chain/Chain";
 import axios, { HttpStatusCode } from "axios";
 import logger from "../log/logger";
+import { SolidityCompilation } from "../compilation/SolidityCompilation";
+import { VyperCompilation } from "../compilation/VyperCompilation";
 
 interface VyperVersion {
   compiler_version: string;
@@ -80,7 +84,7 @@ export type ConfluxscanResult = {
   SourceCode: string;
   ABI: string;
   ContractName: string;
-  ContractFileName: string;
+  ContractFileName?: string;
   CompilerVersion: string;
   OptimizationUsed: string;
   Runs: string;
@@ -316,7 +320,7 @@ export const fetchFromConfluxscan = async (
   return resultJson.result[0] as ConfluxscanResult;
 };
 
-export const processSolidityResultFromConfluxscan = (
+const processSolidityResultFromConfluxscan = (
   contractResultJson: ConfluxscanResult,
 ): ProcessedConfluxscanResult => {
   const sourceCodeObject = contractResultJson.SourceCode;
@@ -375,7 +379,7 @@ export const processSolidityResultFromConfluxscan = (
   };
 };
 
-export const processVyperResultFromConfluxscan = async (
+const processVyperResultFromConfluxscan = async (
   contractResultJson: ConfluxscanResult,
 ): Promise<ProcessedConfluxscanResult> => {
   const sourceCodeProperty = contractResultJson.SourceCode;
@@ -458,7 +462,7 @@ export const processVyperResultFromConfluxscan = async (
   };
 };
 
-export const isVyperResult = (
+const isVyperResult = (
   confluxscanResult: ConfluxscanResult,
 ): boolean => {
   return confluxscanResult.CompilerVersion.startsWith("vyper");
@@ -475,4 +479,37 @@ function toEspaceResult(json: any, corespace?: boolean) {
   delete json["data"];
 
   return json;
+}
+
+export async function getCompilationFromEtherscanResult(
+  etherscanResult: ConfluxscanResult,
+  solc: ISolidityCompiler,
+  vyperCompiler: IVyperCompiler,
+): Promise<SolidityCompilation | VyperCompilation> {
+  let compilation: SolidityCompilation | VyperCompilation;
+  if (isVyperResult(etherscanResult)) {
+    const processedResult =
+      await processVyperResultFromConfluxscan(etherscanResult);
+    compilation = new VyperCompilation(
+      vyperCompiler,
+      processedResult.compilerVersion,
+      processedResult.jsonInput as VyperJsonInput,
+      {
+        path: processedResult.contractPath,
+        name: processedResult.contractName,
+      },
+    );
+  } else {
+    const processedResult = processSolidityResultFromConfluxscan(etherscanResult);
+    compilation = new SolidityCompilation(
+      solc,
+      processedResult.compilerVersion,
+      processedResult.jsonInput as SolidityJsonInput,
+      {
+        path: processedResult.contractPath,
+        name: processedResult.contractName,
+      },
+    );
+  }
+  return compilation;
 }

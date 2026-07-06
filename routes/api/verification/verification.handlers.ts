@@ -1,8 +1,9 @@
-import type {
-  Metadata,
+import {
   VyperJsonInput,
   SolidityJsonInput,
+  FeJsonInput,
   CompilationTarget,
+  Metadata, splitFullyQualifiedName
 } from "@ethereum-sourcify/lib-sourcify";
 import { TypedResponse } from "../../types";
 import { Request } from "express";
@@ -20,7 +21,7 @@ interface VerifyFromJsonInputRequest extends Request {
     address: string;
   };
   body: {
-    stdJsonInput: SolidityJsonInput | VyperJsonInput;
+    stdJsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput;
     compilerVersion: string;
     contractIdentifier: string;
     constructorArguments?: string;
@@ -53,9 +54,9 @@ export async function verifyFromJsonInputEndpoint(
 
   // The contract path can include a colon itself. Therefore,
   // we need to take the last element as the contract name.
-  const splitIdentifier = req.body.contractIdentifier.split(":");
-  const contractName = splitIdentifier[splitIdentifier.length - 1];
-  const contractPath = splitIdentifier.slice(0, -1).join(":");
+  const { contractName, contractPath } = splitFullyQualifiedName(
+    req.body.contractIdentifier,
+  );
   const compilationTarget: CompilationTarget = {
     name: contractName,
     path: contractPath,
@@ -71,8 +72,8 @@ export async function verifyFromJsonInputEndpoint(
       req.body.stdJsonInput,
       _.trimStart(req.body.compilerVersion, "v"),
       compilationTarget,
-      req.body.constructorArguments,
       req.body.creationTransactionHash,
+      req.body.constructorArguments,
       req.body.licenseType,
       req.body.contractLabel,
     );

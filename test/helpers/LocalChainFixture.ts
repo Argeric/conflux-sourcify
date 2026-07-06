@@ -18,6 +18,7 @@ import {
 } from "@ethereum-sourcify/lib-sourcify";
 import path from "path";
 import fs from "fs";
+import _ from 'lodash'
 
 const storageContractSourcePath = path.join(
   __dirname,
@@ -39,29 +40,37 @@ const storageModifiedContractSource = fs.readFileSync(
   storageModifiedContractSourcePath,
 );
 
+const storageModifiedJsonInput: any = _.cloneDeep(storageJsonInput);
+storageModifiedJsonInput.sources = {
+  "contracts/StorageModified.sol": {
+    "content": storageModifiedContractSource.toString(),
+  }
+}
+
 const HARDHAT_PORT = 8545;
 const DEFAULT_CHAIN_ID = "31337";
 
 export type LocalChainFixtureOptions = {
   chainId?: number;
+  port?: number;
 };
 
 export class LocalChainFixture {
   defaultContractSource = storageContractSource;
   defaultContractModifiedSource = storageModifiedContractSource;
-  defaultContractMetadata = Buffer.from(
-    JSON.stringify(storageContractMetadata),
-  );
+
   defaultContractMetadataObject = storageContractMetadata as Metadata;
-  defaultContractModifiedMetadata = Buffer.from(
-    JSON.stringify(storageContractMetadataModified),
-  );
+  defaultContractModifiedMetadataObject = storageContractMetadataModified as Metadata;
+
   defaultContractMetadataWithModifiedIpfsHash =
     getMetadataWithModifiedIpfsHash();
   defaultContractArtifact = storageContractArtifact;
-  defaultContractJsonInput = storageJsonInput;
 
-  private readonly _chainId?: string;
+  defaultContractJsonInput = storageJsonInput;
+  defaultContractModifiedJsonInput = storageModifiedJsonInput;
+
+  private _chainId?: string;
+  private _port: number;
   private _localSigner?: JsonRpcSigner;
   private _defaultContractAddress?: string;
   private _defaultContractCreatorTx?: string;
@@ -115,9 +124,8 @@ export class LocalChainFixture {
    * Expected to be called in a "describe" block.
    */
   constructor(options: LocalChainFixtureOptions = {}) {
-    const chains = loadConfig().chains;
-    const localChain = chains[options.chainId ?? DEFAULT_CHAIN_ID];
-    this._chainId = localChain.chainId.toString();
+    this._chainId = String(options.chainId ?? DEFAULT_CHAIN_ID);
+    this._port = options.port ?? HARDHAT_PORT;
 
     before(async () => {
       // Init IPFS mock with all the necessary pinned files
@@ -133,14 +141,15 @@ export class LocalChainFixture {
           });
       }
 
-      this.hardhatNodeProcess = await startHardhatNetwork(HARDHAT_PORT);
+      this.hardhatNodeProcess = await startHardhatNetwork(this._port);
 
+      const sourcifyChainHardhat = loadConfig().chains[Number(DEFAULT_CHAIN_ID)];
       const ethersNetwork = new Network(
-        localChain.rpcs[0].rpc as string,
-        localChain.chainId,
+        sourcifyChainHardhat.rpcs[0].rpc as string,
+        sourcifyChainHardhat.chainId,
       );
       this._localSigner = await new JsonRpcProvider(
-        `http://localhost:${HARDHAT_PORT}`,
+        `http://localhost:${this._port}`,
         ethersNetwork,
         { staticNetwork: ethersNetwork },
       ).getSigner();

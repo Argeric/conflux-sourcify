@@ -1,10 +1,11 @@
 import Piscina from "piscina";
 import {
-  SourcifyLibError,
+  SourcifyLibError
 } from "@ethereum-sourcify/lib-sourcify";
 import { resolve } from "path";
 import { SolcLocal } from "../compiler/SolcLocal";
 import { VyperLocal } from "../compiler/VyperLocal";
+import { FeLocal } from "../compiler/FeLocal";
 import { v4 as uuidv4 } from "uuid";
 import { getCreatorTx } from "../utils/contract-creation-util";
 import type {
@@ -16,10 +17,7 @@ import type {
   VerificationWorkerInput,
 } from "./workerTypes";
 import {
-  isVyperResult,
-  ProcessedConfluxscanResult,
-  processSolidityResultFromConfluxscan,
-  processVyperResultFromConfluxscan,
+  getCompilationFromEtherscanResult
 } from "../utils/confluxscan-util";
 import { asyncLocalStorage } from "../../common/async-context";
 import { Chain } from "../chain/Chain";
@@ -32,15 +30,17 @@ import { useAllSourcesAndReturnCompilation } from "../validation/processFiles";
 import logger from "../log/logger";
 import { createCompilationFromJsonInput } from '../utils/compilation';
 import { AnyCompilation } from '../compilation/CompilationTypes';
+import { VyperCompilation } from "../compilation/VyperCompilation";
 
 export const filename = resolve(__filename);
 
 let chainMap: { [chainId: string]: Chain };
 let solc: SolcLocal;
 let vyper: VyperLocal;
+let fe: FeLocal;
 
 const initWorker = () => {
-  if (chainMap && solc && vyper) {
+  if (chainMap && solc && vyper && fe) {
     return;
   }
 
@@ -60,8 +60,8 @@ const initWorker = () => {
     Piscina.workerData.solcRepoPath,
     Piscina.workerData.solJsonRepoPath,
   );
-
   vyper = new VyperLocal(Piscina.workerData.vyperRepoPath);
+  fe = new FeLocal(Piscina.workerData.feRepoPath);
 };
 
 async function runWorkerFunctionWithContext<T extends VerificationWorkerInput>(
@@ -103,7 +103,7 @@ async function _verifyFromJsonInput({
   let compilation: AnyCompilation;
   try {
     compilation = createCompilationFromJsonInput(
-      { solc, vyper },
+      { solc, vyper, fe },
       compilerVersion,
       jsonInput,
       compilationTarget,
@@ -237,23 +237,25 @@ async function _verifyFromConfluxscan({
   address,
   confluxscanResult,
 }: VerifyFromConfluxscanInput): Promise<VerifyOutput> {
-  let processedResult: ProcessedConfluxscanResult;
-  if (isVyperResult(confluxscanResult)) {
-    processedResult =
-      await processVyperResultFromConfluxscan(confluxscanResult);
-  } else {
-    processedResult = processSolidityResultFromConfluxscan(confluxscanResult);
+  let compilation: SolidityCompilation | VyperCompilation;
+  try {
+    compilation = await getCompilationFromEtherscanResult(
+      confluxscanResult,
+      solc,
+      vyper,
+    );
+  } catch (error: any) {
+    return {
+      errorExport: createErrorExport(error),
+    };
   }
 
   return _verifyFromJsonInput({
     chainId,
     address,
-    jsonInput: processedResult.jsonInput,
-    compilerVersion: processedResult.compilerVersion,
-    compilationTarget: {
-      name: processedResult.contractName,
-      path: processedResult.contractPath,
-    },
+    jsonInput: compilation.jsonInput,
+    compilerVersion: compilation.compilerVersion,
+    compilationTarget: compilation.compilationTarget,
   });
 }
 

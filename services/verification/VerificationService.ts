@@ -1,5 +1,7 @@
 import {
   SolidityJsonInput,
+  VyperJsonInput,
+  FeJsonInput,
   VerificationExport,
   CompilationTarget,
   Metadata,
@@ -38,6 +40,7 @@ export interface VerificationOptions {
   solcRepoPath: string;
   solJsonRepoPath: string;
   vyperRepoPath: string;
+  feRepoPath: string;
   initCompilers?: boolean;
   workerIdleTimeout?: number;
   concurrentVerificationsPerWorker?: number;
@@ -75,6 +78,7 @@ export class VerificationService {
         solcRepoPath: options.solcRepoPath,
         solJsonRepoPath: options.solJsonRepoPath,
         vyperRepoPath: options.vyperRepoPath,
+        feRepoPath: options.feRepoPath,
         chains,
       },
       minThreads: os.availableParallelism() * 0.5,
@@ -149,11 +153,11 @@ export class VerificationService {
     verificationEndpoint: string,
     chainId: number,
     address: string,
-    jsonInput: SolidityJsonInput,
+    jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput,
     compilerVersion: string,
     compilationTarget: CompilationTarget,
-    constructorArguments?: string,
     creationTransactionHash?: string,
+    constructorArguments?: string,
     licenseType?: number,
     contractLabel?: string,
   ): Promise<VerificationJobId> {
@@ -171,26 +175,16 @@ export class VerificationService {
       compilerVersion,
       compilationTarget,
       creationTransactionHash,
+      constructorArguments,
+      licenseType,
+      contractLabel,
       traceId: asyncLocalStorage.getStore()?.traceId,
     };
 
-    const task = this.workerPool
-      .run(input, { name: "verifyFromJsonInput" })
-      .then((output: VerifyOutput) => {
-        return this.handleWorkerResponse(
-          verificationId,
-          output,
-          licenseType,
-          contractLabel,
-          constructorArguments,
-        );
-      })
-      .finally(() => {
-        this.runningTaskIds.delete(verificationId);
-        this.runningTasks.delete(task);
-      });
-    this.runningTaskIds.add(verificationId);
-    this.runningTasks.add(task);
+    this.runInBackground(
+      verificationId,
+      this.verifyViaWorker(verificationId, "verifyFromJsonInput", input)
+    );
 
     return verificationId;
   }
@@ -219,17 +213,10 @@ export class VerificationService {
       traceId: asyncLocalStorage.getStore()?.traceId,
     };
 
-    const task = this.workerPool
-      .run(input, { name: "verifyFromMetadata" })
-      .then((output: VerifyOutput) => {
-        return this.handleWorkerResponse(verificationId, output);
-      })
-      .finally(() => {
-        this.runningTaskIds.delete(verificationId);
-        this.runningTasks.delete(task);
-      });
-    this.runningTaskIds.add(verificationId);
-    this.runningTasks.add(task);
+    this.runInBackground(
+      verificationId,
+      this.verifyViaWorker(verificationId, "verifyFromMetadata", input)
+    );
 
     return verificationId;
   }
@@ -238,33 +225,26 @@ export class VerificationService {
     verificationEndpoint: string,
     chainId: number,
     address: string,
-    etherscanResult: ConfluxscanResult,
+    confluxscanResult: ConfluxscanResult
   ): Promise<VerificationJobId> {
     const verificationId = await this.store.storeVerificationJob(
       new Date(),
       chainId,
       address,
-      verificationEndpoint,
+      verificationEndpoint
     );
 
     const input: VerifyFromConfluxscanInput = {
       chainId,
       address,
-      confluxscanResult: etherscanResult,
-      traceId: asyncLocalStorage.getStore()?.traceId,
+      confluxscanResult,
+      traceId: asyncLocalStorage.getStore()?.traceId
     };
 
-    const task = this.workerPool
-      .run(input, { name: "verifyFromConfluxscan" })
-      .then((output: VerifyOutput) => {
-        return this.handleWorkerResponse(verificationId, output);
-      })
-      .finally(() => {
-        this.runningTaskIds.delete(verificationId);
-        this.runningTasks.delete(task);
-      });
-    this.runningTaskIds.add(verificationId);
-    this.runningTasks.add(task);
+    this.runInBackground(
+      verificationId,
+      this.verifyViaWorker(verificationId, "verifyFromConfluxscan", input)
+    );
 
     return verificationId;
   }
@@ -323,21 +303,28 @@ export class VerificationService {
     return verificationId;
   }
 
-  private async handleWorkerResponse(
+  public isRunning(verificationId: string): boolean {
+    return this.runningTaskIds.has(verificationId);
+  }
+
+  private verifyViaWorker(
     verificationId: VerificationJobId,
-    output: VerifyOutput,
-    licenseType?: number,
-    contractLabel?: string,
-    constructorArguments?: string,
+    functionName: string,
+    input:
+      | VerifyFromJsonInput
+      | VerifyFromMetadataInput
+      | VerifyFromConfluxscanInput,
   ): Promise<void> {
-    return Promise.resolve(output)
+    const { constructorArguments, licenseType, contractLabel } = input as any;
+    return this.workerPool
+      .run(input, { name: functionName })
       .then((output: VerifyOutput) => {
         if (output.verificationExport) {
           if (constructorArguments) {
             if (!validABIEncoded(constructorArguments)) {
               throw new VerifyError({
                 customCode: "constructor_args_not_abi_encoded",
-                errorId: uuidv4(),
+                errorId: uuidv4()
               });
             }
 
@@ -348,13 +335,13 @@ export class VerificationService {
               address: output.verificationExport.address,
               chainId: output.verificationExport.chainId,
               constructorArguments,
-              expectValue,
+              expectValue
             });
 
             if (!matchBytesIgnoreCase(constructorArguments, expectValue)) {
               throw new VerifyError({
                 customCode: "constructor_args_not_match",
-                errorId: uuidv4(),
+                errorId: uuidv4()
               });
             }
           }
@@ -370,10 +357,10 @@ export class VerificationService {
           verification,
           {
             verificationId,
-            finishTime: new Date(),
+            finishTime: new Date()
           },
           licenseType,
-          contractLabel,
+          contractLabel
         );
       })
       .catch((error) => {
@@ -382,31 +369,52 @@ export class VerificationService {
           // error comes from the verification worker
           logger.debug("Received verification error from worker", {
             verificationId,
-            errorExport: error.errorExport,
+            errorExport: {
+              ...error.errorExport,
+              // Don't log the full bytecodes because it's too long
+              onchainRuntimeCode: error.errorExport?.onchainRuntimeCode
+                ? error.errorExport.onchainRuntimeCode.slice(0, 200) + "..."
+                : error.errorExport?.onchainRuntimeCode,
+              recompiledRuntimeCode: error.errorExport?.recompiledRuntimeCode
+                ? error.errorExport.recompiledRuntimeCode.slice(0, 200) + "..."
+                : error.errorExport?.recompiledRuntimeCode,
+              onchainCreationCode: error.errorExport?.onchainCreationCode
+                ? error.errorExport.onchainCreationCode.slice(0, 200) + "..."
+                : error.errorExport?.onchainCreationCode,
+              recompiledCreationCode: error.errorExport?.recompiledCreationCode
+                ? error.errorExport.recompiledCreationCode.slice(0, 200) + "..."
+                : error.errorExport?.recompiledCreationCode
+            }
           });
           errorExport = error.errorExport;
         } else if (error instanceof ConflictError) {
           // returned by StorageService if match already exists and new one is not better
           errorExport = {
             customCode: "already_verified",
-            errorId: uuidv4(),
+            errorId: uuidv4()
           };
         } else {
+          errorExport = {
+            customCode: "internal_error",
+            errorId: uuidv4()
+          };
           logger.error("Unexpected verification error", {
             verificationId,
             error,
+            errorId: errorExport.errorId
           });
-          errorExport = {
-            customCode: "internal_error",
-            errorId: uuidv4(),
-          };
         }
 
         return this.store.setJobError(verificationId, new Date(), errorExport);
       });
   }
 
-  public isRunning(verificationId: string): boolean {
-    return this.runningTaskIds.has(verificationId);
+  private runInBackground(verificationId: string, promise: Promise<void>): void {
+    const task = promise.finally(() => {
+      this.runningTaskIds.delete(verificationId);
+      this.runningTasks.delete(task);
+    });
+    this.runningTaskIds.add(verificationId);
+    this.runningTasks.add(task);
   }
 }

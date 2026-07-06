@@ -45,8 +45,8 @@ router.get("/chains", (_req, res) => {
 });
 
 router.use("/", lookupRoutes);
-router.use("/", verificationRoutes);
 router.use("/", jobsRoutes);
+router.use("/", verificationRoutes);
 router.use("/", abiRoutes);
 
 export default router;

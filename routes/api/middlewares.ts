@@ -15,6 +15,7 @@ import type {
   Metadata,
   SolidityJsonInput,
   VyperJsonInput,
+  FeJsonInput,
 } from "@ethereum-sourcify/lib-sourcify";
 import { ChainMap } from "../../server";
 import logger from "../../services/log/logger";
@@ -112,7 +113,8 @@ export function validateStandardJsonInput(
 
   const stdJsonInput = req.body.stdJsonInput as
     | SolidityJsonInput
-    | VyperJsonInput;
+    | VyperJsonInput
+    | FeJsonInput;
   if (!stdJsonInput.language) {
     throw new InvalidParametersError(
       "Standard JSON input must contain a language field.",
@@ -158,10 +160,31 @@ export function validateCompilerVersion(
   res: Response,
   next: NextFunction,
 ) {
-  if (!req.body.compilerVersion) {
-    throw new InvalidParametersError("Compiler version is required");
+  let compilerVersion = req.body.compilerVersion;
+  if (!compilerVersion) {
+    throw new InvalidParametersError("Compiler version is required.");
   }
 
+  if (compilerVersion.startsWith("v")) {
+    compilerVersion = compilerVersion.slice(1);
+  }
+
+  // Validate based on language if available
+  const language = req.body.stdJsonInput?.language;
+  if (language === "Solidity") {
+    // Solidity version pattern: 0.8.7+commit.e28d00a7 or 0.8.31-nightly.2025.8.11+commit.635fe8f8
+    const solidityPattern =
+      /^\d+\.\d+\.\d+(-nightly\.\d{4}\.\d+\.\d+)?\+commit\.[a-f0-9]{8}$/;
+    if (!solidityPattern.test(compilerVersion)) {
+      throw new InvalidParametersError(
+        `Invalid Solidity compiler version format: ${compilerVersion}. Expected format: x.y.z+commit.xxxxxxxx or x.y.z-nightly.yyyy.m.d+commit.xxxxxxxx`,
+      );
+    }
+  }
+  // For Vyper and other languages, we can't do much validation here due to inconsistent naming.
+  // It will throw if it can't download the version.
+
+  req.body.compilerVersion = compilerVersion;
   next();
 }
 
@@ -208,6 +231,66 @@ export function validateSources(
 ) {
   if (!req.body.sources) {
     throw new InvalidParametersError("Sources is required");
+  }
+
+  next();
+}
+
+export function validateAndNormalizeFeInput(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const stdJsonInput = req.body.stdJsonInput;
+  if (stdJsonInput?.language !== "Fe") {
+    return next();
+  }
+
+  const sources = stdJsonInput.sources as Record<string, { content: string }>;
+  const keys = Object.keys(sources);
+  const withSrc = keys.filter((k) => k.startsWith("src/"));
+
+  // Reject mixed paths (some with src/, some without)
+  // Fe's file structure is based on this convention https://fe-lang.org/ingots/project-structure/
+  if (withSrc.length > 0 && withSrc.length < keys.length) {
+    throw new InvalidParametersError(
+      'Fe sources must either all have a "src/" prefix or none. Mixed paths are not allowed.',
+    );
+  }
+
+  // If no keys have src/ prefix: add it to all keys
+  if (withSrc.length === 0) {
+    const normalized: Record<string, { content: string }> = {};
+    for (const [k, v] of Object.entries(sources)) {
+      normalized[`src/${k}`] = v;
+    }
+    req.body.stdJsonInput = { ...stdJsonInput, sources: normalized };
+  }
+
+  // Normalize contractIdentifier for Fe:
+  // - Must include a colon, e.g. "src/lib.fe:Counter" or "src/counter.fe:Counter"
+  // - Path must start with "src/" and end with ".fe"
+  const ci: string | undefined = req.body.contractIdentifier;
+  if (ci) {
+    const colonIdx = ci.lastIndexOf(":");
+    if (colonIdx === -1) {
+      throw new InvalidParametersError(
+        'For Fe contracts, contractIdentifier must include the source file path, e.g. "src/lib.fe:Counter" or "src/counter.fe:Counter".',
+      );
+    } else {
+      let contractPath = ci.slice(0, colonIdx);
+      const contractName = ci.slice(colonIdx + 1);
+      if (!contractPath.startsWith("src/")) {
+        contractPath = `src/${contractPath}`;
+      }
+      if (!contractPath.endsWith(".fe")) {
+        throw new InvalidParametersError(
+          'For Fe contracts, contractIdentifier path must be a "src/**/*.fe" path ' +
+          '(e.g. "src/lib.fe:Counter" or "src/counter.fe:Counter").',
+        );
+      }
+      req.body.contractIdentifier = `${contractPath}:${contractName}`;
+    }
   }
 
   next();

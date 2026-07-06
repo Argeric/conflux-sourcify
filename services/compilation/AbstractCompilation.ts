@@ -7,6 +7,7 @@ import {
   CompilationError,
   ISolidityCompiler,
   IVyperCompiler,
+  IFeCompiler,
 } from "@ethereum-sourcify/lib-sourcify";
 import {
   ImmutableReferences,
@@ -18,25 +19,28 @@ import {
   VyperJsonInput,
   VyperOutput,
   VyperOutputContract,
+  FeJsonInput,
+  FeOutput,
+  FeOutputContract,
 } from "@ethereum-sourcify/compilers-types";
-import {
-  logInfo,
-  logSilly,
-  logWarn,
-} from "@ethereum-sourcify/compilers/build/main/logger";
 import logger from "../log/logger";
+
+function cleanCompilerVersion(version: string): string {
+  // Remove non-numerical characters from the beginning of the version string
+  return version.replace(/^[^\d]*/, '');
+}
 
 export abstract class AbstractCompilation {
   /**
    * Constructor parameters
    */
-  abstract compiler: ISolidityCompiler | IVyperCompiler;
-  abstract compilerVersion: string;
+  abstract compiler: ISolidityCompiler | IVyperCompiler | IFeCompiler;
+  compilerVersion: string;
   abstract compilationTarget: CompilationTarget;
-  jsonInput: SolidityJsonInput | VyperJsonInput;
+  jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput;
 
   protected _metadata?: Metadata;
-  compilerOutput?: SolidityOutput | VyperOutput;
+  compilerOutput?: SolidityOutput | VyperOutput | FeOutput;
   compilationTime?: number;
 
   abstract auxdataStyle: AuxdataStyle;
@@ -55,23 +59,27 @@ export abstract class AbstractCompilation {
     forceEmscripten?: boolean,
   ): Promise<void>;
 
-  constructor(jsonInput: SolidityJsonInput | VyperJsonInput) {
+  constructor(
+    compilerVersion: string,
+    jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput,
+  ) {
+    this.compilerVersion = cleanCompilerVersion(compilerVersion);
     this.jsonInput = structuredClone(jsonInput);
   }
 
   public async compileAndReturnCompilationTarget(
     forceEmscripten = false,
-  ): Promise<SolidityOutputContract | VyperOutputContract> {
+  ): Promise<SolidityOutputContract | VyperOutputContract| FeOutputContract> {
     const version = this.compilerVersion;
 
     const compilationStartTime = Date.now();
-    logInfo("Compiling contract", {
+    logger.info("Compiling contract", {
       version,
       contract: this.compilationTarget.name,
       path: this.compilationTarget.path,
       forceEmscripten,
     });
-    logSilly("Compilation input", { solcJsonInput: this.jsonInput });
+    logger.debug("Compilation input", { solcJsonInput: this.jsonInput });
     try {
       if (!this.compilerOutput) {
         // compile once
@@ -82,14 +90,14 @@ export abstract class AbstractCompilation {
         );
       }
     } catch (e: any) {
-      logWarn("Compiler error", {
+      logger.warn("Compiler error", {
         error: e.message,
       });
       throw new CompilationError({ code: "compiler_error" });
     }
 
     if (this.compilerOutput === undefined) {
-      logWarn("Compiler error: compilerOutput is undefined");
+      logger.warn("Compiler error: compilerOutput is undefined");
       throw new CompilationError({ code: "no_compiler_output" });
     }
 
@@ -98,8 +106,8 @@ export abstract class AbstractCompilation {
 
     const compilationEndTime = Date.now();
     this.compilationTime = compilationEndTime - compilationStartTime;
-    logSilly("Compilation output", { compilerOutput: this.compilerOutput });
-    logInfo("Compiled contract", {
+    logger.debug("Compilation output", { compilerOutput: this.compilerOutput });
+    logger.info("Compiled contract", {
       version,
       contract: this.compilationTarget.name,
       path: this.compilationTarget.path,
@@ -140,10 +148,14 @@ export abstract class AbstractCompilation {
     return contractFullQualifyNames;
   }
 
-  get contractCompilerOutput(): SolidityOutputContract | VyperOutputContract {
+  get contractCompilerOutput(): SolidityOutputContract | VyperOutputContract| FeOutputContract {
     if (!this.compilerOutput) {
-      logWarn("Compiler output is undefined");
+      logger.warn("Compiler output is undefined");
       throw new CompilationError({ code: "no_compiler_output" });
+    }
+    // In solcjs, for solidity versions prior to 0.4.9, the contracts are stored without the source path as a key
+    if (this.compilerOutput.contracts['']?.[this.compilationTarget.name]) {
+      return this.compilerOutput.contracts[''][this.compilationTarget.name];
     }
     if (
       !this.compilerOutput.contracts ||
@@ -152,7 +164,10 @@ export abstract class AbstractCompilation {
         this.compilationTarget.name
       ]
     ) {
-      logWarn("Contract not found in compiler output");
+      logger.warn("Contract not found in compiler output", {
+        path: this.compilationTarget.path,
+        name: this.compilationTarget.name,
+      });
       throw new CompilationError({
         code: "contract_not_found_in_compiler_output",
       });

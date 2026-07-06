@@ -16,6 +16,9 @@ export default {
   vyper: {
     vyperRepo: process.env.VYPER_REPO || "./vyper-repo",
   },
+  fe: {
+    feRepo: process.env.FE_REPO || "./fe-repo",
+  },
   mysql: {
     host: process.env.MYSQL_HOST || "127.0.0.1",
     port: parseInt(process.env.MYSQL_PORT || "3306"),
@@ -28,7 +31,7 @@ export default {
     logging: false,
   },
   chains: {
-    1: {
+    /*1: {
       name: "Conflux coreSpace testnet",
       supported: true,
       corespace: true,
@@ -51,7 +54,7 @@ export default {
         delayBlocksAgainstLatest: 3,
       },
       announcement: "cfxtest:aca514ancmbdu9u349u4m7d0u4jjdv83py3muarnv1",
-    },
+    },*/
     71: {
       name: "Conflux eSpace testnet",
       supported: true,
@@ -148,7 +151,7 @@ export default {
         }
       ],
     },
-    /*1: {
+    1: {
       name: "Ethereum Mainnet",
       supported: true,
       corespace: false,
@@ -161,10 +164,10 @@ export default {
       },
       rpcs: [
         {
-          rpc: "https://ethereum-rpc.publicnode.com",
+          rpc: "https://eth.drpc.org",
         }
       ],
-    },*/
+    },
     17000: {
       name: "Ethereum Holesky Testnet",
       supported: true,

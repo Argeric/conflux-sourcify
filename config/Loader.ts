@@ -17,6 +17,7 @@ export interface Config {
   chainHealth: ChainHealth,
   solc: SolcOptions;
   vyper: VyperOptions;
+  fe: FeOptions;
   mysql: DatabaseOptions;
   log: LoggingConfig;
   alert: AlertConfig;
@@ -30,7 +31,7 @@ export type ChainInstance = SourcifyChainInstance & {
     apiKeyEnvName?: string;
   };
   fetchContractCreationTxUsing?: FetchContractCreationTxUsing;
-  announcement: string;
+  announcement?: string;
   sync?: SyncOptions;
 };
 
@@ -95,6 +96,10 @@ export interface SolcOptions {
 
 export interface VyperOptions {
   vyperRepo: string;
+}
+
+export interface FeOptions {
+  feRepo: string;
 }
 
 export interface DatabaseOptions extends Options {

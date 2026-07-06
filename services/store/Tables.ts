@@ -15,15 +15,15 @@ import {
   SolidityOutputContract,
   SoliditySettings,
   VyperSettings,
-  SourcifyLibErrorData, VyperSourceMap,
-} from '@ethereum-sourcify/lib-sourcify';
-import { Abi } from "abitype";
+  SourcifyLibErrorData, VyperSourceMap, TransientStorageLayout
+} from "@ethereum-sourcify/lib-sourcify";
 import {
   VerifiedContract as VerifiedContractApiObject,
   Nullable,
 } from "../../routes/types";
 import { JsonFragment, keccak256 } from 'ethers';
 import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
+import { getCompilerNameFromLanguage } from "../utils/database-util";
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
 
@@ -177,9 +177,8 @@ export namespace Tables {
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
+      transientStorageLayout: Nullable<TransientStorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
-      methodIdentifiers?: Nullable<any>;
-      ir?: any;
     };
     compiler_settings: Omit<
       SoliditySettings | VyperSettings,
@@ -188,12 +187,12 @@ export namespace Tables {
     creation_code_hash?: string;
     runtime_code_hash: string;
     creation_code_artifacts: {
-      sourceMap: Nullable<string>;
+      sourceMap: Nullable<string | VyperSourceMap>;
       linkReferences: Nullable<LinkReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
     runtime_code_artifacts: {
-      sourceMap: string | VyperSourceMap | null;
+      sourceMap: Nullable<string | VyperSourceMap>;
       linkReferences: Nullable<LinkReferences>;
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
@@ -214,6 +213,7 @@ export namespace Tables {
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
       storageLayout: Nullable<StorageLayout>;
+      transientStorageLayout: Nullable<TransientStorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
       methodIdentifiers?: Nullable<any>;
       ir?: any;
@@ -426,7 +426,7 @@ export namespace Tables {
     verified_contract_id: number;
     runtime_match: Nullable<VerificationStatus>;
     creation_match: Nullable<VerificationStatus>;
-    metadata: Metadata;
+    metadata?: Nullable<Metadata>;
     license_type?: number;
     contract_label?: string;
     similar_match_chain_id?: number;
@@ -441,7 +441,7 @@ export namespace Tables {
     verified_contract_id!: number;
     runtime_match!: Nullable<VerificationStatus>;
     creation_match!: Nullable<VerificationStatus>;
-    metadata!: Metadata;
+    metadata?: Nullable<Metadata>;
     license_type?: number;
     contract_label?: string;
     similar_match_chain_id?: number;
@@ -459,7 +459,7 @@ export namespace Tables {
           verified_contract_id: { type: DataTypes.BIGINT, allowNull: false },
           runtime_match: { type: DataTypes.CHAR(20) },
           creation_match: { type: DataTypes.CHAR(20) },
-          metadata: { type: DataTypes.JSON, allowNull: false },
+          metadata: { type: DataTypes.JSON },
           license_type: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -746,7 +746,7 @@ export type GetSourcifyMatchByChainAddressResult = Tables.ISourcifyMatch &
     Tables.IVerifiedContract,
     "creation_values" | "runtime_values" | "compilation_id"
   > &
-  Pick<Tables.ICompiledContract, "runtime_code_artifacts" | "name"> &
+  Pick<Tables.ICompiledContract, "runtime_code_artifacts" | "name" | "version"> &
   Pick<Tables.IContractDeployment, "transaction_hash"> & {
     onchain_runtime_code: string;
   };
@@ -792,7 +792,9 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
       | "runtime_transformations"
       | "runtime_values"
     > &
-    Pick<Tables.IContractDeployment, "block_number" | "transaction_index"> & {
+    Pick<Tables.IContractDeployment,
+      "block_number" | "transaction_index" | "chain_id"
+    > & {
       verified_at: string;
       address: string;
       onchain_creation_code: string;
@@ -810,11 +812,21 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
       deployer: string;
       sources: { [path: string]: { content: string } };
       storage_layout: Tables.ICompiledContract["compilation_artifacts"]["storageLayout"];
+      transient_storage_layout: Tables.ICompiledContract["compilation_artifacts"]["transientStorageLayout"];
       source_ids: Tables.ICompiledContract["compilation_artifacts"]["sources"];
       std_json_input: SolidityJsonInput | VyperJsonInput;
       std_json_output: SolidityOutput | VyperOutput;
     }
 >;
+
+export type GetSourcifyMatchesAllChainsResult = Pick<
+  Tables.ISourcifyMatch,
+  "id" | "creation_match" | "runtime_match"
+> &
+  Pick<Tables.IContractDeployment, "chain_id"> & {
+  address: string;
+  verified_at: string;
+};
 
 export type CompiledContractSource = Tables.ICompiledContractSource &
   Pick<Tables.ISource, "content">;
@@ -860,6 +872,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   id: "sourcify_matches.id",
   creation_match: "sourcify_matches.creation_match",
   runtime_match: "sourcify_matches.runtime_match",
+  chain_id: "contract_deployments.chain_id",
   verified_at:
     "DATE_FORMAT(sourcify_matches.created_at, '%Y-%m-%dT%H:%i:%sT') as verified_at",
   license_type: "sourcify_matches.license_type",
@@ -872,7 +885,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   recompiled_creation_code:
     "nullif(CONVERT(recompiled_creation_code.code USING utf8), '0x') as recompiled_creation_code",
   creation_source_map:
-    "compiled_contracts.creation_code_artifacts->>'$.sourceMap' as creation_source_map",
+    "compiled_contracts.creation_code_artifacts->'$.sourceMap' as creation_source_map",
   creation_link_references:
     "compiled_contracts.creation_code_artifacts->'$.linkReferences' as creation_link_references",
   creation_cbor_auxdata:
@@ -884,7 +897,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   recompiled_runtime_code:
     "nullif(CONVERT(recompiled_runtime_code.code USING utf8), '0x') as recompiled_runtime_code",
   runtime_source_map:
-    "compiled_contracts.runtime_code_artifacts->>'$.sourceMap' as runtime_source_map",
+    "compiled_contracts.runtime_code_artifacts->'$.sourceMap' as runtime_source_map",
   runtime_link_references:
     "compiled_contracts.runtime_code_artifacts->'$.linkReferences' as runtime_link_references",
   runtime_cbor_auxdata:
@@ -910,6 +923,8 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   metadata: "sourcify_matches.metadata",
   storage_layout:
     "compiled_contracts.compilation_artifacts->'$.storageLayout' as storage_layout",
+  transient_storage_layout:
+    "compiled_contracts.compilation_artifacts->'$.transientStorageLayout' as transient_storage_layout",
   userdoc: "compiled_contracts.compilation_artifacts->'$.userdoc' as userdoc",
   devdoc: "compiled_contracts.compilation_artifacts->'$.devdoc' as devdoc",
   source_ids:
@@ -934,6 +949,7 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
           'userdoc', compiled_contracts.compilation_artifacts->'$.userdoc',
           'devdoc', compiled_contracts.compilation_artifacts->'$.devdoc',
           'storageLayout', compiled_contracts.compilation_artifacts->'$.storageLayout',
+          'transientStorageLayout', compiled_contracts.compilation_artifacts->'$.transientStorageLayout',
           'evm', json_object(
             'bytecode', json_object(
               'object', nullif(CONVERT(recompiled_creation_code.code USING utf8), '0x'),
@@ -1038,6 +1054,7 @@ export const FIELDS_TO_STORED_PROPERTIES: Record<
   abi: "abi",
   metadata: "metadata",
   storageLayout: "storage_layout",
+  transientStorageLayout: "transient_storage_layout",
   userdoc: "userdoc",
   devdoc: "devdoc",
   sourceIds: "source_ids",
@@ -1214,6 +1231,9 @@ export async function getDatabaseColumnsFromVerification(
     devdoc: compilerOutput?.devdoc || null,
     storageLayout:
       (compilerOutput as SolidityOutputContract)?.storageLayout || null,
+    transientStorageLayout:
+      (compilerOutput as SolidityOutputContract)?.transientStorageLayout ||
+      null,
     sources: verification.compilation.compilerOutput?.sources || null,
   };
   const creationCodeArtifacts = {
@@ -1277,19 +1297,6 @@ export async function getDatabaseColumnsFromVerification(
     }),
   );
 
-  let compiler;
-  switch (verification.compilation.language.toLocaleLowerCase()) {
-    case "yul":
-    case "solidity":
-      compiler = "solc";
-      break;
-    case "vyper":
-      compiler = "vyper";
-      break;
-    default:
-      throw new Error("Language not supported");
-  }
-
   return {
     recompiledCreationCode,
     recompiledRuntimeCode: {
@@ -1311,7 +1318,7 @@ export async function getDatabaseColumnsFromVerification(
     },
     compiledContract: {
       language: verification.compilation.language.toLocaleLowerCase(),
-      compiler,
+      compiler: getCompilerNameFromLanguage(verification.compilation.language),
       compiler_settings: prepareCompilerSettingsFromVerification(verification),
       name: verification.compilation.compilationTarget.name,
       version: verification.compilation.compilerVersion,

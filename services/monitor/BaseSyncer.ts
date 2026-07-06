@@ -39,7 +39,7 @@ export class BaseSyncer {
       return;
     }
 
-    const txHash = await getCreatorTx(this.chain, this.chain.announcement);
+    const txHash = await getCreatorTx(this.chain, this.chain.announcement!);
     if (!txHash) {
       throw new Error("Could not get creator tx for announcement.");
     }

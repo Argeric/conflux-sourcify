@@ -9,5 +9,6 @@
     "skipLibCheck": true,
     "incremental": true,
     "allowSyntheticDefaultImports": true,
+    "types": ["node", "mocha"],
   },
 }

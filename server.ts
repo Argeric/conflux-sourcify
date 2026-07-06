@@ -2,7 +2,7 @@ import express from "express";
 import http from "http";
 import path from "path";
 import bodyParser from "body-parser";
-import { ISolidityCompiler } from "@ethereum-sourcify/lib-sourcify";
+import { IFeCompiler, ISolidityCompiler, IVyperCompiler } from "@ethereum-sourcify/lib-sourcify";
 import routes from "./routes/routes";
 import genericErrorHandler from "./common/errors/GenericErrorHandler";
 import { Services } from "./services/services";
@@ -14,6 +14,8 @@ import { heapDump } from "./services/utils/profile-util";
 import { enableHttpProxy } from "./services/utils/util";
 import fileUpload from "express-fileupload";
 import logger, { setLogLevel } from "./services/log/logger";
+import { VyperLocal } from "./services/compiler/VyperLocal";
+import { FeLocal } from "./services/compiler/FeLocal";
 
 export type ChainMap = {
   [chainId: string]: Chain;
@@ -24,6 +26,8 @@ export interface ServerOptions {
   maxFileSize: number;
   chains: ChainMap;
   solc: ISolidityCompiler;
+  vyper: IVyperCompiler;
+  fe: IFeCompiler;
   enableProfile: boolean;
   log?: LoggingConfig;
 }
@@ -58,6 +62,8 @@ export class Server {
 
     this.app.set("chains", this.chains);
     this.app.set("solc", options.solc);
+    this.app.set("vyper", options.vyper);
+    this.app.set("fe", options.fe);
     this.app.set("services", this.services);
 
     this.app.use(
@@ -111,6 +117,8 @@ export class Server {
 
 const config = loadConfig();
 const solc = new SolcLocal(config.solc.solcBinRepo, config.solc.solcJsRepo);
+const vyper = new VyperLocal(config.vyper.vyperRepo);
+const fe = new FeLocal(config.fe.feRepo);
 const chainMap: ChainMap = {};
 for (const chainObj of Object.values(config.chains)) {
   chainMap[chainObj.chainId.toString()] = new Chain(chainObj);
@@ -126,6 +134,8 @@ if (require.main === module) {
       enableProfile: config.server.enableProfile,
       chains: chainMap,
       solc,
+      vyper,
+      fe,
       log: config.log,
     },
     {
@@ -133,6 +143,7 @@ if (require.main === module) {
       solcRepoPath: config.solc.solcBinRepo,
       solJsonRepoPath: config.solc.solcJsRepo,
       vyperRepoPath: config.vyper.vyperRepo,
+      feRepoPath: config.fe.feRepo,
       workerIdleTimeout: 3000,
       concurrentVerificationsPerWorker: 1,
     },

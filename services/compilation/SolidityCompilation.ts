@@ -16,9 +16,9 @@ import {
 import {
   findAuxdatasInLegacyAssembly,
 } from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/auxdataUtils";
-import { logWarn } from "@ethereum-sourcify/compilers/build/main/logger";
 import { AbstractCompilation } from "./AbstractCompilation";
 import {findAuxdataPositions} from "./auxdataUtils";
+import logger from "../log/logger";
 
 /**
  * Abstraction of a solidity compilation
@@ -37,11 +37,18 @@ export class SolidityCompilation extends AbstractCompilation {
 
   public constructor(
     public compiler: ISolidityCompiler,
-    public compilerVersion: string,
+    compilerVersion: string,
     jsonInput: SolidityJsonInput,
     public compilationTarget: CompilationTarget,
   ) {
-    super(jsonInput);
+    super(compilerVersion, jsonInput);
+
+    if (semver.lt(this.compilerVersion, '0.1.3')) {
+      throw new CompilationError({
+        code: 'unsupported_compiler_version',
+      });
+    }
+
     this.initSolidityJsonInput();
   }
 
@@ -53,6 +60,7 @@ export class SolidityCompilation extends AbstractCompilation {
           "devdoc",
           "userdoc",
           "storageLayout",
+          'transientStorageLayout',
           "evm.legacyAssembly",
           "evm.bytecode.object",
           "evm.bytecode.sourceMap",
@@ -249,7 +257,7 @@ export class SolidityCompilation extends AbstractCompilation {
         editedContractAuxdatasFromCompilerOutput,
       );
     } catch (error) {
-      logWarn("Cannot generate cbor auxdata positions", {
+      logger.warn("Cannot generate cbor auxdata positions", {
         error,
       });
       throw new CompilationError({
@@ -261,7 +269,11 @@ export class SolidityCompilation extends AbstractCompilation {
   public async compile(forceEmscripten = false) {
     const contract =
       await this.compileAndReturnCompilationTarget(forceEmscripten);
-    this._metadata = JSON.parse(contract.metadata?.trim() || "{}");
+    if (contract.metadata) {
+      this._metadata = JSON.parse(contract.metadata.trim());
+    } else {
+      this._metadata = undefined;
+    }
   }
 
   get immutableReferences(): ImmutableReferences {

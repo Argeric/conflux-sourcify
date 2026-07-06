@@ -2,7 +2,7 @@ import {
   CompiledContractSource,
   CountSourcifyMatchAddresses,
   GetSourcifyMatchByChainAddressResult,
-  GetSourcifyMatchByChainAddressWithPropertiesResult,
+  GetSourcifyMatchByChainAddressWithPropertiesResult, GetSourcifyMatchesAllChainsResult,
   GetSourcifyMatchesByChainResult,
   GetVerificationJobByIdResult,
   GetVerificationJobsByChainAndAddressResult,
@@ -10,7 +10,7 @@ import {
   SourceInformation,
   STORED_PROPERTIES_TO_SELECTORS,
   StoredProperties,
-  Tables,
+  Tables
 } from "./Tables";
 import { QueryTypes, Sequelize, Transaction } from "sequelize";
 import { DatabaseOptions } from "../../config/Loader";
@@ -20,6 +20,7 @@ import IContractDeployment = Tables.IContractDeployment;
 import IVerifiedContract = Tables.IVerifiedContract;
 import ISourcifyMatch = Tables.ISourcifyMatch;
 import { CONST } from "../../common/constants";
+import { ConflictError } from "../../common/errors";
 
 export class Dao {
   private readonly options: DatabaseOptions;
@@ -81,7 +82,7 @@ export class Dao {
           verified_contract_id,
           creation_match,
           runtime_match,
-          metadataStr,
+          metadataStr || null,
           license_type || CONST.LICENSES.None.code,
           contract_label || null,
           similar_match_chain_id || null,
@@ -266,6 +267,7 @@ export class Dao {
           verified_contracts.compilation_id,
           compiled_contracts.runtime_code_artifacts,
           compiled_contracts.name,
+          compiled_contracts.version,
           contract_deployments.transaction_hash,
           CONVERT(onchain_runtime_code.code USING utf8) AS onchain_runtime_code
         FROM sourcify_matches
@@ -349,6 +351,32 @@ export class Dao {
     return records?.length
       ? (records[0] as GetSourcifyMatchByChainAddressWithPropertiesResult)
       : null;
+  }
+
+  async getSourcifyMatchesAllChains(
+    address: string,
+  ): Promise<GetSourcifyMatchesAllChainsResult[]> {
+    const selectors = [
+      STORED_PROPERTIES_TO_SELECTORS["id"],
+      STORED_PROPERTIES_TO_SELECTORS["creation_match"],
+      STORED_PROPERTIES_TO_SELECTORS["runtime_match"],
+      STORED_PROPERTIES_TO_SELECTORS["address"],
+      STORED_PROPERTIES_TO_SELECTORS["chain_id"],
+      STORED_PROPERTIES_TO_SELECTORS["verified_at"],
+    ];
+    return await this.pool.query(
+      `SELECT 
+        ${selectors.join(", ")}
+      FROM contract_deployments
+      JOIN verified_contracts ON verified_contracts.deployment_id = contract_deployments.id
+      JOIN sourcify_matches ON sourcify_matches.verified_contract_id = verified_contracts.id
+      WHERE contract_deployments.address = ?
+      `,
+      {
+        type: QueryTypes.SELECT,
+        replacements: [address],
+      },
+    );
   }
 
   async getSourcifyMatchAddressesByChainAndMatch(
@@ -499,6 +527,12 @@ export class Dao {
         ],
       },
     );
+
+    if (effectRows === 0) {
+      throw new ConflictError(
+        "A verified contract already exist for your compilation and deployment",
+      );
+    }
 
     if (effectRows) {
       return { id } as any;

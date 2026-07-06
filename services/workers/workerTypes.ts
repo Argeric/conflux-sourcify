@@ -1,6 +1,7 @@
 import type {
   SolidityJsonInput,
   VyperJsonInput,
+  FeJsonInput,
   VerificationExport,
   CompilationTarget,
   Metadata,
@@ -16,10 +17,13 @@ export interface VerificationWorkerInput {
 }
 
 export interface VerifyFromJsonInput extends VerificationWorkerInput {
-  jsonInput: SolidityJsonInput | VyperJsonInput;
+  jsonInput: SolidityJsonInput | VyperJsonInput | FeJsonInput;
   compilerVersion: string;
   compilationTarget: CompilationTarget;
   creationTransactionHash?: string;
+  constructorArguments?: string
+  licenseType?: number,
+  contractLabel?: string,
 }
 
 export interface VerifyFromMetadataInput extends VerificationWorkerInput {
