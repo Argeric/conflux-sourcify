@@ -21,7 +21,7 @@ import {
 } from "../../routes/types";
 import { VerifyErrorExport } from "../workers/workerTypes";
 import { DatabaseOptions } from "../../config/Loader";
-import { NotFoundError } from "../../common/errors";
+import { ConflictError, NotFoundError } from "../../common/errors";
 
 export default class StoreBase {
   public database: Dao;
@@ -249,6 +249,9 @@ export default class StoreBase {
         return verifiedContract.id;
       });
     } catch (e) {
+      if (e instanceof ConflictError) {
+        throw e;
+      }
       throw new Error(
         `cannot update verified_contract address=${databaseColumns.contractDeployment.address} chainId=${databaseColumns.contractDeployment.chain_id}\n${e}`,
       );

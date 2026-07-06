@@ -1,20 +1,22 @@
 import {
   BytesLike,
+  Contract,
   ContractFactory,
   Interface,
   InterfaceAbi,
   JsonFragment,
-  JsonRpcSigner,
-} from 'ethers';
+  JsonRpcSigner
+} from "ethers";
 import chai from "chai";
 import chaiHttp from "chai-http";
 import { ServerFixture } from "./ServerFixture";
 import sinon from "sinon";
-import { Sequelize } from "sequelize";
+import { QueryTypes, Sequelize } from "sequelize";
 import { LocalChainFixture } from "./LocalChainFixture";
 import express from "express";
 import { promises as fs } from "fs";
 import path from "path";
+import { assertJobVerification } from "./assertions";
 
 chai.use(chaiHttp);
 
@@ -245,6 +247,20 @@ export function waitSecs(secs = 0) {
   return new Promise((resolve) => setTimeout(resolve, secs * 1000));
 }
 
+// Sends a tx that changes the state
+export async function callContractMethodWithTx(
+  signer: JsonRpcSigner,
+  abi: JsonFragment[],
+  contractAddress: string,
+  methodName: string,
+  args: any[],
+) {
+  const contract = new Contract(contractAddress, abi, signer);
+  const txResponse = await contract[methodName].send(...args);
+  const txReceipt = await txResponse.wait();
+  return txReceipt;
+}
+
 export async function readFilesFromDirectory(dirPath: string) {
   try {
     const filesContent: Record<string, string> = {};
@@ -281,6 +297,209 @@ export async function resetDatabase(database: Sequelize) {
   await database.query("DELETE FROM code;");
 
   await database.query("ALTER TABLE sourcify_matches AUTO_INCREMENT = 1;");
+}
+
+export async function testPartialUpgrade(
+  serverFixture: ServerFixture,
+  chainFixture: LocalChainFixture,
+  matchType: "creation" | "runtime",
+) {
+  /*const partialMetadata = (
+    await import("../testcontracts/Storage/metadataModified.json")
+  ).default;
+  const partialMetadataBuffer = Buffer.from(JSON.stringify(partialMetadata));
+
+  const partialSourcePath = path.join(
+    __dirname,
+    "..",
+    "testcontracts",
+    "Storage",
+    "StorageModified.sol",
+  );
+  const partialSourceBuffer = readFileSync(partialSourcePath);*/
+
+  /*let res = await chai
+    .request(serverFixture.server.app)
+    .post("/")
+    .field("address", chainFixture.defaultContractAddress)
+    .field("chain", chainFixture.chainId)
+    .field("creatorTxHash", chainFixture.defaultContractCreatorTx)
+    .attach("files", partialMetadataBuffer, "metadata.json")
+    .attach("files", partialSourceBuffer);
+  await assertVerification(
+    serverFixture,
+    null,
+    res,
+    null,
+    chainFixture.defaultContractAddress,
+    chainFixture.chainId,
+    "partial",
+  );*/
+  const sandbox = sinon.createSandbox();
+  const makeWorkersWait = hookIntoVerificationWorkerRun(sandbox, serverFixture);
+  const { resolveWorkers, runTaskStub } = makeWorkersWait();
+  let verifyRes = await chai
+    .request(serverFixture.server.app)
+    .post(
+      `/verify/metadata/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+    )
+    .send({
+      sources: {
+        [Object.keys(chainFixture.defaultContractModifiedMetadataObject.sources)[0]]:
+          chainFixture.defaultContractModifiedSource.toString(),
+      },
+      metadata: chainFixture.defaultContractModifiedMetadataObject,
+      creationTransactionHash: chainFixture.defaultContractCreatorTx,
+    });
+  await assertJobVerification(
+    serverFixture,
+    verifyRes,
+    resolveWorkers,
+    chainFixture.chainId,
+    chainFixture.defaultContractAddress,
+    "match",
+  );
+
+  const contractMatchesWithPartialMetadata: any[] =
+    await serverFixture.sourcifyDatabase.query(
+      "SELECT runtime_match, creation_match FROM sourcify_matches;",
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+  chai
+    .expect(contractMatchesWithPartialMetadata[0].runtime_match)
+    .to.equal("partial");
+  chai
+    .expect(contractMatchesWithPartialMetadata[0].creation_match)
+    .to.equal("partial");
+
+  const contractDeploymentWithoutCreatorTransactionHash: any[] =
+    await serverFixture.sourcifyDatabase.query(
+      "SELECT encode(transaction_hash, 'hex') as transaction_hash, block_number, transaction_index, contract_id FROM contract_deployments",
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+  const contractIdWithoutCreatorTransactionHash =
+    contractDeploymentWithoutCreatorTransactionHash[0].contract_id;
+
+  // Force perfect ${matchType}Match by setting sourcify_match.${matchType}Match = "perfect" and moving contract to full_match
+  await serverFixture.sourcifyDatabase.query(
+    `UPDATE sourcify_matches SET ${matchType}_match='perfect' WHERE 1=1`,
+    {
+      type: QueryTypes.UPDATE,
+    }
+  );
+
+  /*const existingPath = path.join(
+    config.get("repositoryV1.path"),
+    "contracts",
+    "partial_match",
+    chainFixture.chainId,
+    chainFixture.defaultContractAddress,
+  );
+  const newPath = path.join(
+    config.get("repositoryV1.path"),
+    "contracts",
+    "full_match",
+    chainFixture.chainId,
+    chainFixture.defaultContractAddress,
+  );
+  await fs.mkdir(path.dirname(newPath), { recursive: true });
+  await fs.rename(existingPath, newPath);*/
+
+  // verify again with original metadata file
+  /*res = await chai
+    .request(serverFixture.server.app)
+    .post("/")
+    .field("address", chainFixture.defaultContractAddress)
+    .field("chain", chainFixture.chainId)
+    .field("creatorTxHash", chainFixture.defaultContractCreatorTx)
+    .attach("files", chainFixture.defaultContractMetadata, "metadata.json")
+    .attach("files", chainFixture.defaultContractSource);
+  await assertVerification(
+    serverFixture,
+    null,
+    res,
+    null,
+    chainFixture.defaultContractAddress,
+    chainFixture.chainId,
+  );*/
+  runTaskStub.restore();
+  const { resolveWorkers: resolveWorkers2 } = makeWorkersWait();
+  verifyRes = await chai
+    .request(serverFixture.server.app)
+    .post(
+      `/verify/metadata/${chainFixture.chainId}/${chainFixture.defaultContractAddress}`,
+    )
+    .send({
+      sources: {
+        [Object.keys(chainFixture.defaultContractMetadataObject.sources)[0]]:
+          chainFixture.defaultContractSource.toString(),
+      },
+      metadata: chainFixture.defaultContractMetadataObject,
+      creationTransactionHash: chainFixture.defaultContractCreatorTx,
+    });
+  await assertJobVerification(
+    serverFixture,
+    verifyRes,
+    resolveWorkers2,
+    chainFixture.chainId,
+    chainFixture.defaultContractAddress,
+    "match",
+  );
+
+  const contractMatchesWithPerfectMetadata: any[] =
+    await serverFixture.sourcifyDatabase.query(
+      "SELECT runtime_match, creation_match FROM sourcify_matches;",
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+  chai
+    .expect(contractMatchesWithPerfectMetadata[0].runtime_match)
+    .to.equal("perfect");
+  chai
+    .expect(contractMatchesWithPerfectMetadata[0].creation_match)
+    .to.equal("perfect");
+
+  const contractDeploymentWithCreatorTransactionHash: any[] =
+    await serverFixture.sourcifyDatabase.query(
+      "SELECT encode(transaction_hash, 'hex') as transaction_hash, block_number, transaction_index, contract_id FROM contract_deployments",
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+  const contractIdWithCreatorTransactionHash =
+    contractDeploymentWithCreatorTransactionHash[0].contract_id;
+
+  // There should not be a new contract_id
+  chai
+    .expect(contractIdWithCreatorTransactionHash)
+    .to.equal(contractIdWithoutCreatorTransactionHash);
+
+  const sourcesResult: any[] = await serverFixture.sourcifyDatabase.query(
+    "SELECT encode(source_hash, 'hex') as source_hash FROM compiled_contracts_sources",
+    {
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  chai.expect(sourcesResult).to.have.length(2);
+  chai.expect(sourcesResult).to.deep.equal([
+    {
+      source_hash:
+        "fd080cadfc692807b0d856c83148034ab5c47ededd67ea6c93c500a2a0fd4378",
+    },
+    {
+      source_hash:
+        "fb898a1d72892619d00d572bca59a5d98a9664169ff850e2389373e2421af4aa",
+    },
+  ]);
 }
 
 /**

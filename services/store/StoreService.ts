@@ -666,6 +666,12 @@ export class StoreService extends StoreBase implements RWStorageService {
       [] as StoredProperties[],
     );
 
+    // Fetch language when metadata is requested — only Solidity has metadata
+    const metadataRequested = requestedFields.has("metadata");
+    if (metadataRequested && !requestedProperties.includes("language")) {
+      requestedProperties.push("language");
+    }
+
     // Retrieve database result
     const sourcifyMatchResult =
       await this.database.getSourcifyMatchByChainAddressWithProperties(
@@ -746,6 +752,14 @@ export class StoreService extends StoreBase implements RWStorageService {
       result.deployment!.deployer = getAddress(
         retrievedContract.deployment.deployer,
       );
+    }
+
+    // Only Solidity contracts have metadata.
+    if (metadataRequested) {
+      const language = sourcifyMatchResult.language;
+      if (language?.toLowerCase() !== "solidity") {
+        result.metadata = null;
+      }
     }
 
     return result;

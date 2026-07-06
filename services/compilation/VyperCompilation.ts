@@ -2,9 +2,11 @@ import { AbstractCompilation } from "./AbstractCompilation";
 import {
   AuxdataStyle,
   decode,
+  getVyperAuxdataStyle,
   splitAuxdata,
+  type VyperDecodedObject,
 } from "@ethereum-sourcify/bytecode-utils";
-import semver, { gte } from "semver";
+import semver, { lt, gt, gte } from "semver";
 import {
   VyperJsonInput,
   VyperOutput,
@@ -17,8 +19,12 @@ import {
   CompilationLanguage,
   CompilationTarget,
   CompiledContractCborAuxdata,
-  IVyperCompiler,
+  IVyperCompiler
 } from "@ethereum-sourcify/lib-sourcify";
+import {
+  isValidImmutableLength,
+  returnLegacyVyperImmutableReferences,
+} from "@ethereum-sourcify/lib-sourcify/build/main/compilation/legacyVyperImmutablesHelpers";
 import logger from "../log/logger";
 
 export function returnFixedVyperVersion(compilerVersion: string): string {
@@ -36,20 +42,31 @@ export function returnFixedVyperVersion(compilerVersion: string): string {
   }
 }
 
+// evm.bytecode.sourceMap is supported from 0.4.0rc4 onwards.
+// compilerVersionCompatibleWithSemver strips the rc/b suffix, so all 0.4.0
+// variants look the same to semver — we must inspect the raw version for that
+// specific boundary.
+export function supportsCreationBytecodeSourceMap(
+  compilerVersion: string,
+  compatibleVersion: string,
+): boolean {
+  if (gt(compatibleVersion, '0.4.0')) return true;
+  if (lt(compatibleVersion, '0.4.0')) return false;
+  // Exactly 0.4.0 — inspect the original version string
+  if (/0\.4\.0b\d+/.test(compilerVersion)) return false;
+  const rcMatch = compilerVersion.match(/0\.4\.0rc(\d+)/);
+  if (rcMatch) return parseInt(rcMatch[1]) >= 4;
+  return true; // stable 0.4.0
+}
+
 export function returnAuxdataStyle(
   compilerVersion: string,
 ):
+  | AuxdataStyle.VYPER_LT_0_3_4
   | AuxdataStyle.VYPER_LT_0_3_5
   | AuxdataStyle.VYPER_LT_0_3_10
   | AuxdataStyle.VYPER {
-  // Vyper version support for auxdata is different for each version
-  if (semver.lt(compilerVersion, '0.3.5')) {
-    return AuxdataStyle.VYPER_LT_0_3_5;
-  } else if (semver.lt(compilerVersion, '0.3.10')) {
-    return AuxdataStyle.VYPER_LT_0_3_10;
-  } else {
-    return AuxdataStyle.VYPER;
-  }
+  return getVyperAuxdataStyle(compilerVersion);
 }
 
 export function returnImmutableReferences(
@@ -57,12 +74,20 @@ export function returnImmutableReferences(
   creationBytecode: string,
   runtimeBytecode: string,
   auxdataStyle: AuxdataStyle,
+  compilerOutput?: VyperOutput,
+  compilationTarget?: CompilationTarget,
 ): ImmutableReferences {
-  let immutableReferences = {};
+  let immutableReferences: ImmutableReferences = {};
   if (gte(compilerVersion, '0.3.10')) {
     try {
-      const { immutableSize } = decode(creationBytecode, auxdataStyle);
-      if (immutableSize) {
+      const { immutableSize } = decode(
+        creationBytecode,
+        auxdataStyle,
+      ) as VyperDecodedObject;
+      if (
+        immutableSize !== undefined &&
+        isValidImmutableLength(immutableSize)
+      ) {
         immutableReferences = {
           '0': [
             {
@@ -77,6 +102,12 @@ export function returnImmutableReferences(
         creationBytecode: creationBytecode,
       });
     }
+  } else if (gte(compilerVersion, '0.3.1') && compilationTarget !== undefined) {
+    immutableReferences = returnLegacyVyperImmutableReferences(
+      compilerOutput,
+      compilationTarget,
+      runtimeBytecode,
+    );
   }
   return immutableReferences;
 }
@@ -97,29 +128,51 @@ export class VyperCompilation extends AbstractCompilation {
   public auxdataStyle:
     | AuxdataStyle.VYPER
     | AuxdataStyle.VYPER_LT_0_3_10
-    | AuxdataStyle.VYPER_LT_0_3_5;
+    | AuxdataStyle.VYPER_LT_0_3_5
+    | AuxdataStyle.VYPER_LT_0_3_4;
 
   // Vyper version is not semver compliant, so we need to handle it differently
   public compilerVersionCompatibleWithSemver: string;
 
   initVyperJsonInput() {
+    const outputs = [
+      'abi',
+      'ast',
+      'interface',
+      'ir',
+      'evm.bytecode.object',
+      'evm.bytecode.opcodes',
+      'evm.deployedBytecode.object',
+      'evm.deployedBytecode.opcodes',
+      'evm.deployedBytecode.sourceMap',
+      'evm.methodIdentifiers',
+    ];
+
+    // userdoc and devdoc are only supported from 0.2.0 onwards
+    if (gte(this.compilerVersionCompatibleWithSemver, '0.2.0')) {
+      outputs.push('userdoc');
+      outputs.push('devdoc');
+    }
+
+    // layout is only supported from 0.4.1 onwards (including betas and rcs)
+    if (gte(this.compilerVersionCompatibleWithSemver, '0.4.1')) {
+      outputs.push('layout');
+    }
+
+    // evm.bytecode.sourceMap is only supported from 0.4.0rc4 onwards
+    if (
+      supportsCreationBytecodeSourceMap(
+        this.compilerVersion,
+        this.compilerVersionCompatibleWithSemver,
+      )
+    ) {
+      outputs.push('evm.bytecode.sourceMap');
+    }
+
     const outputSelection = {
-      [this.compilationTarget.path]: [
-        "abi",
-        "ast",
-        "interface",
-        "ir",
-        "userdoc",
-        "devdoc",
-        "evm.bytecode.object",
-        "evm.bytecode.opcodes",
-        "evm.deployedBytecode.object",
-        "evm.deployedBytecode.opcodes",
-        "evm.deployedBytecode.sourceMap",
-        "evm.methodIdentifiers",
-      ],
+      [this.compilationTarget.path]: outputs,
     };
-    this.jsonInput.settings.outputSelection = outputSelection;
+    this.jsonInput.settings = { ...this.jsonInput.settings, outputSelection };
   }
 
   public constructor(
@@ -148,6 +201,8 @@ export class VyperCompilation extends AbstractCompilation {
       this.creationBytecode,
       this.runtimeBytecode,
       this.auxdataStyle,
+      this.compilerOutput,
+      this.compilationTarget,
     );
   }
 
@@ -174,10 +229,12 @@ export class VyperCompilation extends AbstractCompilation {
         this.auxdataStyle,
       );
 
-      // Vyper 0.3.10 and higher does not have the auxdata in the runtime bytecode
+      // Vyper 0.3.10 and higher does not have CBOR auxdata in the runtime bytecode
       if (
-        this.auxdataStyle === AuxdataStyle.VYPER_LT_0_3_10 ||
-        this.auxdataStyle === AuxdataStyle.VYPER_LT_0_3_5
+        runtimeAuxdataCbor &&
+        runtimeCborLengthHex !== undefined &&
+        (this.auxdataStyle === AuxdataStyle.VYPER_LT_0_3_10 ||
+          this.auxdataStyle === AuxdataStyle.VYPER_LT_0_3_5)
       ) {
         this._runtimeBytecodeCborAuxdata = this.tryGenerateCborAuxdataPosition(
           this.runtimeBytecode,
@@ -193,6 +250,10 @@ export class VyperCompilation extends AbstractCompilation {
         this.auxdataStyle,
       );
 
+      if (!creationAuxdataCbor || creationCborLengthHex === undefined) {
+        this._creationBytecodeCborAuxdata = {};
+        return;
+      }
       this._creationBytecodeCborAuxdata = this.tryGenerateCborAuxdataPosition(
         this.creationBytecode,
         creationAuxdataCbor as string,

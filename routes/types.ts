@@ -13,7 +13,10 @@ import {
   CompilationLanguage,
   Transformation,
   TransformationValues,
-  VerificationStatus, TransientStorageLayout
+  VerificationStatus,
+  TransientStorageLayout,
+  VyperSourceMap,
+  VyperStorageLayout, VyperJsonInput
 } from "@ethereum-sourcify/lib-sourcify";
 import { Response } from "express";
 import { Abi } from "abitype";
@@ -54,7 +57,7 @@ export interface VerifiedContract extends VerifiedContractMinimal {
   creationBytecode?: {
     onchainBytecode: Nullable<string>;
     recompiledBytecode: string;
-    sourceMap: Nullable<string>;
+    sourceMap: Nullable<string | VyperSourceMap>;
     linkReferences: Nullable<LinkReferences>;
     cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     transformations: Nullable<Transformation[]>;
@@ -63,7 +66,7 @@ export interface VerifiedContract extends VerifiedContractMinimal {
   runtimeBytecode?: {
     onchainBytecode: string;
     recompiledBytecode: string;
-    sourceMap: Nullable<string>;
+    sourceMap: Nullable<string | VyperSourceMap>;
     linkReferences: Nullable<LinkReferences>;
     cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     immutableReferences: Nullable<ImmutableReferences>;
@@ -89,7 +92,7 @@ export interface VerifiedContract extends VerifiedContractMinimal {
   };
   abi?: Nullable<Abi>;
   metadata?: Nullable<Metadata>;
-  storageLayout?: Nullable<StorageLayout>;
+  storageLayout?: Nullable<StorageLayout | VyperStorageLayout>;
   transientStorageLayout?: Nullable<TransientStorageLayout>;
   userdoc?: Nullable<Userdoc>;
   devdoc?: Nullable<Devdoc>;
@@ -99,6 +102,9 @@ export interface VerifiedContract extends VerifiedContractMinimal {
       Pick<SolidityOutputSource, "id"> | Pick<VyperOutputSource, "id">
     >
   >;
+  additionalInput?: Nullable<{
+    storage_layout_overrides?: VyperJsonInput["storage_layout_overrides"];
+  }>;
   stdJsonInput?: SolidityJsonInput;
   stdJsonOutput?: SolidityOutput;
   proxyResolution?: ProxyResolution;

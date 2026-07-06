@@ -7,7 +7,6 @@ import {
   TransformationValues,
   CompiledContractCborAuxdata,
   LinkReferences,
-  VyperJsonInput,
   SolidityJsonInput,
   SolidityOutput,
   VyperOutput,
@@ -15,7 +14,11 @@ import {
   SolidityOutputContract,
   SoliditySettings,
   VyperSettings,
-  SourcifyLibErrorData, VyperSourceMap, TransientStorageLayout
+  SourcifyLibErrorData,
+  VyperSourceMap,
+  TransientStorageLayout,
+  VyperOutputContract,
+  VyperStorageLayout, VyperJsonInput
 } from "@ethereum-sourcify/lib-sourcify";
 import {
   VerifiedContract as VerifiedContractApiObject,
@@ -24,6 +27,18 @@ import {
 import { JsonFragment, keccak256 } from 'ethers';
 import { DataTypes, Model, Sequelize, Transaction } from "sequelize";
 import { getCompilerNameFromLanguage } from "../utils/database-util";
+
+// Top-level standard JSON input fields (besides language/sources/settings) that the
+// database can store in the `compiled_contracts.additional_input` column. The API
+// rejects any other top-level field for better UX, while the DB CHECK constraint
+// `validate_additional_input` remains the authoritative backstop. Keep this list in
+// sync with that constraint (services/database/database-specs/migrations).
+export const SUPPORTED_ADDITIONAL_INPUT_FIELDS = [
+  "storage_layout_overrides",
+] as const;
+
+type SupportedAdditionalInputField =
+  (typeof SUPPORTED_ADDITIONAL_INPUT_FIELDS)[number];
 
 export type JobErrorData = Omit<SourcifyLibErrorData, "chainId" | "address">;
 
@@ -176,7 +191,7 @@ export namespace Tables {
       abi: Nullable<JsonFragment[]>;
       userdoc: Nullable<any>;
       devdoc: Nullable<any>;
-      storageLayout: Nullable<StorageLayout>;
+      storageLayout: Nullable<StorageLayout | VyperStorageLayout>;
       transientStorageLayout: Nullable<TransientStorageLayout>;
       sources: Nullable<CompilationArtifactSource>;
     };
@@ -197,6 +212,9 @@ export namespace Tables {
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
+    additional_input: Nullable<
+      Partial<Pick<VyperJsonInput, SupportedAdditionalInputField>>
+    >;
   }
   export class CompiledContract
     extends Model<ICompiledContract>
@@ -235,6 +253,9 @@ export namespace Tables {
       immutableReferences: Nullable<ImmutableReferences>;
       cborAuxdata: Nullable<CompiledContractCborAuxdata>;
     };
+    additional_input!: Nullable<
+      Partial<Pick<VyperJsonInput, SupportedAdditionalInputField>>
+    >;
     static register(sequelize: Sequelize) {
       CompiledContract.init(
         {
@@ -258,6 +279,7 @@ export namespace Tables {
           runtime_code_hash: { type: DataTypes.CHAR(66), allowNull: false },
           creation_code_artifacts: { type: DataTypes.JSON, allowNull: false },
           runtime_code_artifacts: { type: DataTypes.JSON, allowNull: false },
+          additional_input: { type: DataTypes.JSON },
         },
         {
           tableName: "compiled_contracts",
@@ -268,6 +290,7 @@ export namespace Tables {
               unique: true,
               fields: [
                 "compiler",
+                "version",
                 "language",
                 "creation_code_hash",
                 "runtime_code_hash",
@@ -814,6 +837,7 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
       storage_layout: Tables.ICompiledContract["compilation_artifacts"]["storageLayout"];
       transient_storage_layout: Tables.ICompiledContract["compilation_artifacts"]["transientStorageLayout"];
       source_ids: Tables.ICompiledContract["compilation_artifacts"]["sources"];
+      additional_input: Tables.ICompiledContract["additional_input"];
       std_json_input: SolidityJsonInput | VyperJsonInput;
       std_json_output: SolidityOutput | VyperOutput;
     }
@@ -929,10 +953,15 @@ export const STORED_PROPERTIES_TO_SELECTORS = {
   devdoc: "compiled_contracts.compilation_artifacts->'$.devdoc' as devdoc",
   source_ids:
     "compiled_contracts.compilation_artifacts->'$.sources' as source_ids",
-  std_json_input: `json_object(
-    'language', CONCAT(UPPER(LEFT(compiled_contracts.language, 1)), LOWER(SUBSTRING(compiled_contracts.language, 2))), 
-    'sources', ${sourcesAggregation},
-    'settings', compiled_contracts.compiler_settings
+  additional_input: "compiled_contracts.additional_input",
+  std_json_input: `
+  json_merge_patch(
+    json_object(
+      'language', CONCAT(UPPER(LEFT(compiled_contracts.language, 1)), LOWER(SUBSTRING(compiled_contracts.language, 2))), 
+      'sources', ${sourcesAggregation},
+      'settings', compiled_contracts.compiler_settings
+    ),
+    coalesce(compiled_contracts.additional_input, json_object()) 
   ) as std_json_input`,
   std_json_output: `json_object(
     'sources', compiled_contracts.compilation_artifacts->'$.sources',
@@ -1058,6 +1087,7 @@ export const FIELDS_TO_STORED_PROPERTIES: Record<
   userdoc: "userdoc",
   devdoc: "devdoc",
   sourceIds: "source_ids",
+  additionalInput: "additional_input",
   stdJsonInput: "std_json_input",
   stdJsonOutput: "std_json_output",
   proxyResolution: {
@@ -1230,26 +1260,34 @@ export async function getDatabaseColumnsFromVerification(
     userdoc: compilerOutput?.userdoc || null,
     devdoc: compilerOutput?.devdoc || null,
     storageLayout:
-      (compilerOutput as SolidityOutputContract)?.storageLayout || null,
+      (compilerOutput as SolidityOutputContract)?.storageLayout ||
+      (compilerOutput as VyperOutputContract)?.layout?.storage_layout ||
+      null,
     transientStorageLayout:
       (compilerOutput as SolidityOutputContract)?.transientStorageLayout ||
       null,
     sources: verification.compilation.compilerOutput?.sources || null,
   };
   const creationCodeArtifacts = {
-    sourceMap:
-      (compilerOutput as SolidityOutputContract)?.evm?.bytecode?.sourceMap ||
-      null,
+    sourceMap: compilerOutput?.evm?.bytecode?.sourceMap || null,
     linkReferences:
       (compilerOutput as SolidityOutputContract)?.evm?.bytecode
         ?.linkReferences || null,
     cborAuxdata: verification.compilation.creationBytecodeCborAuxdata || null,
   };
 
-  let immutableReferences = null;
-  // immutableReferences for Vyper are not a compiler output and should not be stored
+  let immutableReferences: ImmutableReferences | null = null;
   if (verification.compilation.language === "Solidity") {
     immutableReferences = verification.compilation.immutableReferences || null;
+  } else if (verification.compilation.language === "Vyper") {
+    const vyperImmutableReferences =
+      verification.compilation.immutableReferences;
+    if (
+      vyperImmutableReferences &&
+      Object.keys(vyperImmutableReferences).length > 0
+    ) {
+      immutableReferences = vyperImmutableReferences;
+    }
   }
   const runtimeCodeArtifacts = {
     sourceMap: compilerOutput?.evm.deployedBytecode?.sourceMap || null,
@@ -1326,6 +1364,7 @@ export async function getDatabaseColumnsFromVerification(
       compilation_artifacts: compilationArtifacts,
       creation_code_artifacts: creationCodeArtifacts,
       runtime_code_artifacts: runtimeCodeArtifacts,
+      additional_input: verification.compilation.additionalInput ?? null,
     },
     sourcesInformation,
     verifiedContract: {

@@ -1,9 +1,10 @@
-import { lt } from "semver";
+import { gte, lt } from "semver";
 import {
   AuxdataStyle,
   decode as decodeBytecode,
   SolidityDecodedObject,
   splitAuxdata,
+  VyperDecodedObject
 } from "@ethereum-sourcify/bytecode-utils";
 import {
   BytecodeMatchingResult,
@@ -25,21 +26,57 @@ import {
   CompilationTarget
 } from "@ethereum-sourcify/lib-sourcify";
 import {
-  FeOutputContract,
+  VyperOutputContract,
   ImmutableReferences,
-  Metadata,
   SolidityOutputContract,
+  FeOutputContract,
   SoliditySettings,
-  VyperOutputContract
+  Metadata
 } from "@ethereum-sourcify/compilers-types";
 import { AbstractCompilation } from "../compilation/AbstractCompilation";
 import { SolidityCompilation } from "../compilation/SolidityCompilation";
+import { VyperCompilation } from '../compilation/VyperCompilation';
 import {
   blueprintDeployerBytecode,
   parseBlueprintPreamble,
 } from "../utils/erc5202-util";
 import { SolidityMetadataContract } from "../validation/SolidityMetadataContract";
 import logger from "../log/logger";
+
+
+function auxdataLacksMetadataOrIntegrityHash(
+  auxdata: CompiledContractCborAuxdata[string],
+  compilation: AbstractCompilation,
+): boolean {
+  try {
+    if (
+      compilation.auxdataStyle === AuxdataStyle.SOLIDITY &&
+      gte(compilation.compilerVersion, '0.4.7')
+    ) {
+      const { ipfs, bzzr0, bzzr1 } = decodeBytecode(
+        auxdata.value,
+        compilation.auxdataStyle,
+      ) as SolidityDecodedObject;
+      return ipfs === undefined && bzzr0 === undefined && bzzr1 === undefined;
+    } else if (
+      compilation.auxdataStyle === AuxdataStyle.VYPER &&
+      gte(
+        (compilation as VyperCompilation).compilerVersionCompatibleWithSemver,
+        '0.4.1',
+      )
+    ) {
+      const { integrity } = decodeBytecode(
+        auxdata.value,
+        compilation.auxdataStyle,
+      ) as VyperDecodedObject;
+      return integrity === undefined;
+    } else {
+      return true;
+    }
+  } catch {
+    return true;
+  }
+}
 
 export class Verification {
   // Bytecodes
@@ -460,27 +497,17 @@ export class Verification {
       : populatedRecompiledBytecode === onchainBytecode;
 
     if (doBytecodesMatch) {
-      // If there is perfect match but auxdata doesn't contain any metadata hash, return partial match
+      // If there is perfect match but auxdata doesn't contain any metadata / integrity hash, return partial match
       if (
         !cborAuxdata ||
         Object.keys(cborAuxdata).length === 0 ||
-        Object.values(cborAuxdata).some((cborAuxdata) => {
-          try {
-            const { ipfs, bzzr0, bzzr1 } = decodeBytecode(
-              cborAuxdata.value,
-              this.compilation.auxdataStyle,
-            ) as SolidityDecodedObject;
-            return (
-              ipfs === undefined && bzzr0 === undefined && bzzr1 === undefined
-            );
-          } catch {
-            return true;
-          }
-        })
+        Object.values(cborAuxdata).some((auxdata) =>
+          auxdataLacksMetadataOrIntegrityHash(auxdata, this.compilation),
+        )
       ) {
-        result.match = "partial";
+        result.match = 'partial';
       } else {
-        result.match = "perfect";
+        result.match = 'perfect';
       }
 
       result.libraryMap = libraryMap;
@@ -778,6 +805,13 @@ export class Verification {
       // pass
     }
 
+    // Surface every top-level standard JSON input field used for compilation other than
+    // language/sources/settings (e.g. Vyper's `storage_layout_overrides`) so consumers can
+    // persist them.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { language, sources, settings, ...additionalInput } =
+      this.compilation.jsonInput;
+
     return {
       address: this.address,
       chainId: this.chainId,
@@ -797,15 +831,20 @@ export class Verification {
           abi: contractCompilerOutput?.abi,
           userdoc: contractCompilerOutput?.userdoc,
           devdoc: contractCompilerOutput?.devdoc,
-          storageLayout: (contractCompilerOutput as SolidityOutputContract)
-            ?.storageLayout,
+          storageLayout:
+            (contractCompilerOutput as SolidityOutputContract)?.storageLayout ||
+            (contractCompilerOutput as VyperOutputContract)?.layout
+              ?.storage_layout,
           transientStorageLayout: (
             contractCompilerOutput as SolidityOutputContract
           )?.transientStorageLayout,
           evm: {
             bytecode: {
-              sourceMap: (contractCompilerOutput as SolidityOutputContract)?.evm
-                ?.bytecode?.sourceMap,
+              sourceMap: (
+                contractCompilerOutput as
+                  | SolidityOutputContract
+                  | VyperOutputContract
+              )?.evm?.bytecode?.sourceMap,
               linkReferences: (contractCompilerOutput as SolidityOutputContract)
                 ?.evm?.bytecode?.linkReferences,
             },
@@ -823,9 +862,8 @@ export class Verification {
         creationBytecodeCborAuxdata,
         immutableReferences: immutableReferences,
         metadata,
-        jsonInput: {
-          settings: this.compilation.jsonInput.settings,
-        },
+        jsonInput: { settings },
+        ...(Object.keys(additionalInput).length > 0 ? { additionalInput } : {}),
         compilationTime: this.compilation.compilationTime,
       },
     };
