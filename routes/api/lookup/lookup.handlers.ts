@@ -104,9 +104,9 @@ export async function getContractEndpoint(
   );
 
   if (contract?.compilation) {
-    const { compiler, compilerVersion } = contract.compilation;
-    if (compiler === "solc" && !compilerVersion.startsWith("v")) {
-      contract.compilation.compilerVersion = `v${contract.compilation.compilerVersion}`;
+    const { compilerVersion } = contract.compilation;
+    if (compilerVersion.startsWith("v")) {
+      contract.compilation.compilerVersion = contract.compilation.compilerVersion.slice(1);
     }
   }
 

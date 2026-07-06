@@ -1,10 +1,8 @@
-import { StatusCodes } from "http-status-codes";
 import chai from "chai";
 import chaiHttp from "chai-http";
-import type { Done } from "mocha";
 import { QueryTypes, Sequelize } from "sequelize";
 import type { Response } from "superagent";
-import { VerificationStatus } from "@ethereum-sourcify/lib-sourcify";
+import { Transformation, TransformationValues, VerificationStatus } from "@ethereum-sourcify/lib-sourcify";
 import { ServerFixture } from "./ServerFixture";
 import { getMatchStatus } from "../../services/utils/util";
 import { MatchLevel } from "../../routes/types";
@@ -177,3 +175,51 @@ export async function assertJobVerification(
     );
   }
 };*/
+
+export async function assertTransformations(
+  sourcifyDatabase: Sequelize,
+  expectedAddress: string | undefined,
+  expectedChain: number | undefined,
+  expectedRuntimeTransformations: Transformation[] | null,
+  expectedRuntimeTransformationValues: TransformationValues | null,
+  expectedCreationTransformations: Transformation[] | null,
+  expectedCreationTransformationValues: TransformationValues | null,
+) {
+  // Check if saved to the database
+  const list = await sourcifyDatabase.query(
+    `SELECT
+      cd.address,
+      cd.chain_id,
+      vc.runtime_transformations,
+      vc.runtime_values,
+      vc.creation_transformations,
+      vc.creation_values
+    FROM sourcify_matches sm
+    LEFT JOIN verified_contracts vc ON vc.id = sm.verified_contract_id
+    LEFT JOIN contract_deployments cd ON cd.id = vc.deployment_id
+    WHERE cd.address = ? AND cd.chain_id = ?`,
+    {
+      type: QueryTypes.SELECT,
+      replacements: [expectedAddress, expectedChain],
+    },
+  );
+
+  const contract: any = list?.length ? list[0] : null;
+  chai.expect(contract).to.not.be.null;
+
+  chai.expect(contract.address).to.equal(expectedAddress);
+  chai.expect(contract.chain_id).to.equal(expectedChain);
+
+  chai
+    .expect(contract.runtime_transformations)
+    .to.deep.equal(expectedRuntimeTransformations);
+  chai
+    .expect(contract.runtime_values)
+    .to.deep.equal(expectedRuntimeTransformationValues);
+  chai
+    .expect(contract.creation_transformations)
+    .to.deep.equal(expectedCreationTransformations);
+  chai
+    .expect(contract.creation_values)
+    .to.deep.equal(expectedCreationTransformationValues);
+}

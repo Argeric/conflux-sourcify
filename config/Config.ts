@@ -31,7 +31,7 @@ export default {
     logging: false,
   },
   chains: {
-    /*1: {
+    1: {
       name: "Conflux coreSpace testnet",
       supported: true,
       corespace: true,
@@ -54,7 +54,7 @@ export default {
         delayBlocksAgainstLatest: 3,
       },
       announcement: "cfxtest:aca514ancmbdu9u349u4m7d0u4jjdv83py3muarnv1",
-    },*/
+    },
     71: {
       name: "Conflux eSpace testnet",
       supported: true,
@@ -151,7 +151,7 @@ export default {
         }
       ],
     },
-    1: {
+    /*1: {
       name: "Ethereum Mainnet",
       supported: true,
       corespace: false,
@@ -167,7 +167,7 @@ export default {
           rpc: "https://eth.drpc.org",
         }
       ],
-    },
+    },*/
     17000: {
       name: "Ethereum Holesky Testnet",
       supported: true,
