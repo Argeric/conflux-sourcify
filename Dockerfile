@@ -1,24 +1,25 @@
-FROM node:20.11.1
+FROM node:22.22.0-trixie AS base
 
-# install cargo and rust
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends iputils-ping && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
+ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustc --version && cargo --version
 
-# install iputils-ping
-RUN apt-get update && \
-    apt-get install -y iputils-ping && \
-    rm -rf /var/lib/apt/lists/*
-
-# set workspace
 WORKDIR /verification
 
-# install dependencies
-COPY package*.json ./
-RUN npm install
+FROM base AS builder
 
-# compile
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
 RUN npm run build
 
-CMD ["node"]
+CMD ["node", "server.js"]
+

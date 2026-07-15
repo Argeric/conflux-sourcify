@@ -1,0 +1,31 @@
+curl -X 'POST' \
+  'http://127.0.0.1:17651/verify/71/0xbAA5c87bDd6916B74e61409ff23Cc94a4A77b9B8' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "stdJsonInput": {
+      "language": "Yul",
+      "sources": {
+          "cas-forwarder.yul": {
+              "content": "// SPDX-License-Identifier: MIT\nobject \"cas-forwarder\" {\n    code {\n        datacopy(0, dataoffset(\"runtime\"), datasize(\"runtime\"))\n        return(0, datasize(\"runtime\"))\n    }\n    object \"runtime\" {\n        code {\n            let targetAddress := shr(96, calldataload(0))\n            let codeSize := extcodesize(targetAddress)\n            extcodecopy(targetAddress, 0, 0, codeSize)\n            \n            let success := call(gas(), 0xcA11bde05977b3631167028862bE2a173976CA11, 0, 0, codeSize, 0, 0)\n            \n            let returnSize := returndatasize()\n            returndatacopy(0, 0, returnSize)\n            \n            switch success\n            case 0 {\n                revert(0, returnSize)\n            }\n            default {\n                return(0, returnSize)\n            }\n        }\n    }\n}\n"
+          }
+      },
+      "settings": {
+          "optimizer": {
+              "enabled": true,
+              "details": {
+                  "yul": true
+              }
+          },
+          "viaIR": true,
+          "outputSelection": {
+              "*": {
+                  "*": ["*"]
+              }
+          }
+      }
+  },
+  "compilerVersion": "0.8.26+commit.8a97fa7a",
+  "contractIdentifier": "cas-forwarder.yul:cas-forwarder",
+  "creationTransactionHash": "0x9cdbf2730dd665e286864f2499c8800b9d238f70627cf4448db3c9c352222a88"
+}'

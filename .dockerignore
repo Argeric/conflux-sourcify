@@ -1,0 +1,12 @@
+node_modules
+
+.git
+.gitignore
+.env
+
+Dockerfile
+docker-compose.yaml
+
+solc-repo
+vyper-repo
+fe-repo
