@@ -1,0 +1,28 @@
+curl -X 'POST' \
+  'http://127.0.0.1:17651/verify/71/0x4e59b44847b379578588920cA78FbF26c0B4956C' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "stdJsonInput": {
+    "language":"Yul",
+    "settings":{
+        "optimizer":{
+            "enabled":true,
+            "details":{"yul":true}
+        },
+        "outputSelection":{
+            "*":{
+                "*":["*"]
+            }
+        }
+    },
+    "sources":{
+        "deterministic-deployment-proxy.yul":{
+            "content":"object \"Proxy\" {\n// deployment code\ncode {\nlet size := datasize(\"runtime\")\ndatacopy(0, dataoffset(\"runtime\"), size)\nreturn(0, size)\n}\nobject \"runtime\" {\n// deployed code\ncode {\ncalldatacopy(0, 32, sub(calldatasize(), 32))\nlet result := create2(callvalue(), 0, sub(calldatasize(), 32), calldataload(0))\nif iszero(result) { revert(0, 0) }\nmstore(0, result)\nreturn(12, 20)\n}\n}\n}\n"
+        }
+    }
+  },
+  "compilerVersion": "0.5.8+commit.23d335f2",
+  "contractIdentifier": "deterministic-deployment-proxy.yul:Proxy",
+  "creationTransactionHash": "0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26"
+}'

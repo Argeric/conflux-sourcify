@@ -24,7 +24,7 @@ import {
 import {
   isValidImmutableLength,
   returnLegacyVyperImmutableReferences,
-} from "@ethereum-sourcify/lib-sourcify/build/main/compilation/legacyVyperImmutablesHelpers";
+} from "@ethereum-sourcify/lib-sourcify/build/main/Compilation/legacyVyperImmutablesHelpers";
 import logger from "../log/logger";
 
 export function returnFixedVyperVersion(compilerVersion: string): string {
