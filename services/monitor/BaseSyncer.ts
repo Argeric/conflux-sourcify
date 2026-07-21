@@ -1,23 +1,20 @@
-import { Interface, keccak256 } from "ethers";
+import { Interface } from "ethers";
 import { Chain } from "../chain/Chain";
 import { decodeAnnounce } from "../utils/contract-call-util";
 import { getCreatorTx } from "../utils/contract-creation-util";
 import { Tables } from "../store/Tables";
 import KV = Tables.KV;
+import AbiInfo = Tables.AbiInfo;
 import { format } from "js-conflux-sdk";
 import logger from "../log/logger";
 import { TimedCounter } from "../health/timedCounter";
 import { ConfigInstance } from "../../config/Loader";
-import SignatureType = Tables.SignatureType;
-import MaxSignature = Tables.MaxSignature;
-import MaxFullFormat = Tables.MaxFullFormat;
-import IAbiSignature = Tables.IAbiSignature;
-import AbiSignature = Tables.AbiSignature;
 
 export class BaseSyncer {
   TOPICS = [
     "0x14cb751d0950ff2788201931c45f715f7472443bc197311d9e3a7a0ba566b7e6"
   ];
+  MAX_LEN_EVENT_FULL_FORMAT = Tables.MAX_LEN_EVENT_SIG * 4;
 
   protected chain: Chain;
   protected currentBlock!: number;
@@ -60,19 +57,19 @@ export class BaseSyncer {
 
     const len = list.length;
     if (len) {
-      await AbiSignature.bulkCreate(list, { updateOnDuplicate: ["full_format", "updatedAt"] });
+      await AbiInfo.bulkCreate(list, { updateOnDuplicate: ["full_format", "updatedAt"] });
       logger.info(`Stored abi ${len}, block ${fromBlock} ${endBlock}, chain ${this.chainId}`);
     }
 
     await KV.saveNumber(this.KEY_SYNC_BLOCK_NUM, endBlock);
   }
 
-  private decode(logs: any[]): Tables.IAbiSignature[] {
+  private decode(logs: any[]): Tables.IAbiInfo[] {
     const announces = logs
       .map((log: any) => decodeAnnounce(log))
       .filter(Boolean);
 
-    const list: Tables.IAbiSignature[] = [];
+    const list: Tables.IAbiInfo[] = [];
     for (const announce of announces) {
       if (format.hexAddress(announce.address) !== this.announcement) {
         continue;
@@ -83,65 +80,21 @@ export class BaseSyncer {
       }
 
       const value = Buffer.from(announce.value, "base64").toString();
-      const sigs = BaseSyncer.parseABISignatures(value);
-      list.push(...sigs);
+      const abiArr = JSON.parse(value);
+      const iFace = new Interface(abiArr);
+
+      iFace.forEachFunction(func => {
+        const signature = func.format("sighash");
+        const full_format = func.format("full");
+        if (signature.length > Tables.MAX_LEN_EVENT_SIG ||
+          full_format.length > this.MAX_LEN_EVENT_FULL_FORMAT) {
+          return;
+        }
+        list.push({ hash: func.selector, signature, full_format });
+      });
     }
 
     return list;
-  }
-
-  static parseABISignatures(abiObj: any) {
-    const abi = (typeof abiObj === "string") ? JSON.parse(abiObj) : abiObj;
-
-    let iFace: Interface;
-    try {
-      iFace = new Interface(abi);
-    } catch (e) {
-      logger.info(`Failed to parse abi, abi ${abi}`, e);
-      throw e;
-    }
-
-    const list = [];
-    const fragments = [...Object.values(iFace.fragments)];
-
-    for (const fragment of fragments) {
-      const type = fragment.type;
-      if (type !== SignatureType.Error && type !== SignatureType.Event && type !== SignatureType.Function) {
-        continue;
-      }
-
-      const signature = fragment.format("sighash");
-      const fullFormat = fragment.format("full");
-
-      const abiSig = BaseSyncer.getSignature(type as SignatureType, signature, fullFormat);
-      if (abiSig) {
-        list.push(abiSig);
-      }
-    }
-
-    return list;
-  }
-
-  static getSignature(type: SignatureType, signature: string, full_format: string): IAbiSignature | null {
-    if (signature.length > MaxSignature) {
-      logger.info(`Abi signature ${signature.length} exceeds max length ${MaxSignature}\n`, signature);
-      return null;
-    }
-    if (full_format.length > MaxFullFormat) {
-      logger.info(`Abi fullFormat ${full_format.length} exceeds max length ${MaxFullFormat}\n`, full_format);
-      return null;
-    }
-
-    const hash = keccak256(Buffer.from(signature));
-    const full_format_hash = keccak256(Buffer.from(full_format));
-
-    return {
-      type,
-      full_format_hash,
-      full_format,
-      hash: type === SignatureType.Event ? hash : hash.substring(0, 10),
-      signature
-    };
   }
 
   get chainId() {

@@ -2,8 +2,7 @@ import {
   CompiledContractSource,
   CountSourcifyMatchAddresses,
   GetSourcifyMatchByChainAddressResult,
-  GetSourcifyMatchByChainAddressWithPropertiesResult,
-  GetSourcifyMatchesAllChainsResult,
+  GetSourcifyMatchByChainAddressWithPropertiesResult, GetSourcifyMatchesAllChainsResult,
   GetSourcifyMatchesByChainResult,
   GetVerificationJobByIdResult,
   GetVerificationJobsByChainAndAddressResult,
@@ -16,12 +15,12 @@ import {
 import { QueryTypes, Sequelize, Transaction } from "sequelize";
 import { DatabaseOptions } from "../../config/Loader";
 import { v4 as uuidv4 } from "uuid";
+import IAbiInfo = Tables.IAbiInfo;
 import IContractDeployment = Tables.IContractDeployment;
 import IVerifiedContract = Tables.IVerifiedContract;
 import ISourcifyMatch = Tables.ISourcifyMatch;
 import { CONST } from "../../common/constants";
 import { ConflictError } from "../../common/errors";
-import IAbiSignature = Tables.IAbiSignature;
 
 export class Dao {
   private readonly options: DatabaseOptions;
@@ -1240,12 +1239,12 @@ export class Dao {
 
   async listABIsByHash(
     hash: string
-  ): Promise<IAbiSignature[]> {
+  ): Promise<IAbiInfo[]> {
     const records = await this.pool.query(
       `
         SELECT
           *
-        FROM abi_signatures
+        FROM abi_info
         WHERE hash = ?
       `,
       {
@@ -1254,6 +1253,6 @@ export class Dao {
       }
     );
 
-    return records as IAbiSignature[];
+    return records as IAbiInfo[];
   }
 }
