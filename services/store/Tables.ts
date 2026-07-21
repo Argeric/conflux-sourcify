@@ -666,45 +666,47 @@ export namespace Tables {
     }
   }
 
-  export interface IAbiInfo {
+  export enum SignatureType {
+    Function = "function",
+    Event = "event",
+    Error = "error",
+  }
+
+  export const MaxSignature = 1024;
+  export const MaxFullFormat = 4096;
+
+  export interface IAbiSignature {
     id?: number;
-    hash: string;
-    signature: string;
+    type: string;
+    full_format_hash: string;
     full_format: string;
+    signature: string;
+    hash: string;
     updatedAt?: Date;
   }
 
-  export const MAX_LEN_EVENT_SIG = 1024;
-
-  export class AbiInfo extends Model<IAbiInfo> implements IAbiInfo {
+  export class AbiSignature extends Model<IAbiSignature> implements IAbiSignature {
     id?: number;
-    hash!: string;
-    signature!: string;
+    type!: string;
+    full_format_hash!: string;
     full_format!: string;
+    signature!: string;
+    hash!: string;
     updatedAt?: Date;
 
     static register(sequelize: Sequelize) {
-      AbiInfo.init({
+      AbiSignature.init({
         id: { type: DataTypes.BIGINT, allowNull: false, primaryKey: true, autoIncrement: true },
-        hash: { type: DataTypes.CHAR(10), allowNull: false },
-        signature: { type: DataTypes.STRING(1024), allowNull: false },
-        full_format: { type: DataTypes.STRING(MAX_LEN_EVENT_SIG * 4), allowNull: false },
-        updatedAt: { type: DataTypes.DATE, allowNull: false }
+        type: { type: DataTypes.STRING(16), allowNull: false },
+        full_format_hash: { type: DataTypes.STRING(66), allowNull: false },
+        full_format: { type: DataTypes.STRING(MaxFullFormat), allowNull: false },
+        hash: { type: DataTypes.STRING(66), allowNull: false },
+        signature: { type: DataTypes.STRING(MaxSignature), allowNull: false }
       }, {
-        sequelize: sequelize,
-        tableName: "abi_info",
-        charset: "ascii",
-        collate: "ascii_general_ci",
+        sequelize, tableName: "abi_signatures", charset: "ascii", collate: "ascii_general_ci",
         indexes: [
-          {
-            name: "idx_sig",
-            unique: true,
-            fields: ["signature"]
-          },
-          {
-            name: "idx_hash",
-            fields: ["hash"]
-          }
+          { name: "idx_type_full_hash", unique: true, fields: [{ name: "type" }, { name: "full_format_hash" }] },
+          { name: "idx_type_hash", fields: [{ name: "type" }, { name: "hash" }] }
         ]
       });
     }
@@ -722,7 +724,7 @@ export namespace Tables {
     VerificationJob.register(sequelize);
     VerificationJobEphemeral.register(sequelize);
     KV.register(sequelize);
-    AbiInfo.register(sequelize);
+    AbiSignature.register(sequelize);
   }
 }
 
@@ -754,7 +756,7 @@ export type GetVerifiedContractByChainAndAddressResult =
   Tables.IVerifiedContract & {
     transaction_hash: string | null;
     contract_id: string;
-  };
+};
 
 export type CountSourcifyMatchAddresses = Pick<
   Tables.IContractDeployment,
@@ -772,7 +774,7 @@ export type GetSourcifyMatchByChainAddressResult = Tables.ISourcifyMatch &
   Pick<Tables.ICompiledContract, "runtime_code_artifacts" | "name" | "version"> &
   Pick<Tables.IContractDeployment, "transaction_hash"> & {
     onchain_runtime_code: string;
-  };
+};
 
 export type GetSourcifyMatchesByChainResult = Pick<
   Tables.ISourcifyMatch,
@@ -781,7 +783,7 @@ export type GetSourcifyMatchesByChainResult = Pick<
   Pick<Tables.ICompiledContract, "name"> & {
     address: string;
     verified_at: string;
-  };
+};
 
 export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
   Pick<
@@ -795,52 +797,52 @@ export type GetSourcifyMatchByChainAddressWithPropertiesResult = Partial<
     | "similar_match_chain_id"
     | "similar_match_address"
   > &
-    Pick<
-      Tables.ICompiledContract,
-      | "language"
-      | "compiler"
-      | "version"
-      | "compiler_settings"
-      | "name"
-      | "fully_qualified_name"
-    > &
-    Pick<
-      Tables.ICompiledContract["compilation_artifacts"],
-      "abi" | "userdoc" | "devdoc"
-    > &
-    Pick<
-      Tables.IVerifiedContract,
-      | "creation_transformations"
-      | "creation_values"
-      | "runtime_transformations"
-      | "runtime_values"
-    > &
-    Pick<Tables.IContractDeployment,
-      "block_number" | "transaction_index" | "chain_id"
-    > & {
-      verified_at: string;
-      address: string;
-      onchain_creation_code: string;
-      recompiled_creation_code: string;
-      creation_source_map: Tables.ICompiledContract["creation_code_artifacts"]["sourceMap"];
-      creation_link_references: Tables.ICompiledContract["creation_code_artifacts"]["linkReferences"];
-      creation_cbor_auxdata: Tables.ICompiledContract["creation_code_artifacts"]["cborAuxdata"];
-      onchain_runtime_code: string;
-      recompiled_runtime_code: string;
-      runtime_source_map: Tables.ICompiledContract["runtime_code_artifacts"]["sourceMap"];
-      runtime_link_references: Tables.ICompiledContract["runtime_code_artifacts"]["linkReferences"];
-      runtime_cbor_auxdata: Tables.ICompiledContract["runtime_code_artifacts"]["cborAuxdata"];
-      runtime_immutable_references: Tables.ICompiledContract["runtime_code_artifacts"]["immutableReferences"];
-      transaction_hash: string;
-      deployer: string;
-      sources: { [path: string]: { content: string } };
-      storage_layout: Tables.ICompiledContract["compilation_artifacts"]["storageLayout"];
-      transient_storage_layout: Tables.ICompiledContract["compilation_artifacts"]["transientStorageLayout"];
-      source_ids: Tables.ICompiledContract["compilation_artifacts"]["sources"];
-      additional_input: Tables.ICompiledContract["additional_input"];
-      std_json_input: SolidityJsonInput | VyperJsonInput;
-      std_json_output: SolidityOutput | VyperOutput;
-    }
+  Pick<
+    Tables.ICompiledContract,
+    | "language"
+    | "compiler"
+    | "version"
+    | "compiler_settings"
+    | "name"
+    | "fully_qualified_name"
+  > &
+  Pick<
+    Tables.ICompiledContract["compilation_artifacts"],
+    "abi" | "userdoc" | "devdoc"
+  > &
+  Pick<
+    Tables.IVerifiedContract,
+    | "creation_transformations"
+    | "creation_values"
+    | "runtime_transformations"
+    | "runtime_values"
+  > &
+  Pick<Tables.IContractDeployment,
+    "block_number" | "transaction_index" | "chain_id"
+  > & {
+  verified_at: string;
+  address: string;
+  onchain_creation_code: string;
+  recompiled_creation_code: string;
+  creation_source_map: Tables.ICompiledContract["creation_code_artifacts"]["sourceMap"];
+  creation_link_references: Tables.ICompiledContract["creation_code_artifacts"]["linkReferences"];
+  creation_cbor_auxdata: Tables.ICompiledContract["creation_code_artifacts"]["cborAuxdata"];
+  onchain_runtime_code: string;
+  recompiled_runtime_code: string;
+  runtime_source_map: Tables.ICompiledContract["runtime_code_artifacts"]["sourceMap"];
+  runtime_link_references: Tables.ICompiledContract["runtime_code_artifacts"]["linkReferences"];
+  runtime_cbor_auxdata: Tables.ICompiledContract["runtime_code_artifacts"]["cborAuxdata"];
+  runtime_immutable_references: Tables.ICompiledContract["runtime_code_artifacts"]["immutableReferences"];
+  transaction_hash: string;
+  deployer: string;
+  sources: { [path: string]: { content: string } };
+  storage_layout: Tables.ICompiledContract["compilation_artifacts"]["storageLayout"];
+  transient_storage_layout: Tables.ICompiledContract["compilation_artifacts"]["transientStorageLayout"];
+  source_ids: Tables.ICompiledContract["compilation_artifacts"]["sources"];
+  additional_input: Tables.ICompiledContract["additional_input"];
+  std_json_input: SolidityJsonInput | VyperJsonInput;
+  std_json_output: SolidityOutput | VyperOutput;
+}
 >;
 
 export type GetSourcifyMatchesAllChainsResult = Pick<
