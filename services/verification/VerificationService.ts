@@ -34,6 +34,7 @@ import {
 import { keccak256 } from "ethers";
 import { matchBytesIgnoreCase, validABIEncoded } from "../utils/util";
 import logger from "../log/logger";
+import { getCreatorTx } from "../utils/contract-creation-util";
 
 export interface VerificationOptions {
   chains: ChainMap;
@@ -254,6 +255,7 @@ export class VerificationService {
     chainId: number,
     address: string,
     linkChainIds?: number[],
+    creationTransactionHash?: string
   ): Promise<VerificationJobId> {
     const verificationId = await this.store.storeVerificationJob(
       new Date(),
@@ -273,12 +275,22 @@ export class VerificationService {
       return verificationId;
     }
 
+    const foundCreationTxHash =
+      creationTransactionHash ||
+      (await getCreatorTx(chain, address)) ||
+      undefined;
+
+    const { creationBytecode } = foundCreationTxHash ?
+      await chain.getContractCreationBytecodeAndReceipt(address, foundCreationTxHash) :
+      {};
+
     await this.store
       .insertNewSimilarContract(
         chainId,
         address,
         keccak256(bytecode),
         linkChainIds,
+        creationBytecode,
         {
           verificationId,
           finishTime: new Date(),
