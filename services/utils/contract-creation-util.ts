@@ -46,6 +46,24 @@ function getConfluxscanApiContractCreatorFetcher(
   };
 }
 
+function getConfluxscanApiContractCreationFetcher(
+  apiURL: string,
+  apiKey: string,
+  coreSpace: boolean,
+): ContractCreationFetcher {
+  return {
+    type: "api",
+    url: apiURL + (coreSpace ? CONFLUXSCAN_CORE_API_SUFFIX : CONFLUXSCAN_API_SUFFIX) + apiKey,
+    responseParser: (response: any) => {
+      const creation = coreSpace ? response?.data?.[0] : response?.result?.[0];
+      if (creation) {
+        return creation;
+      }
+      return undefined;
+    },
+  };
+}
+
 async function getCreatorTxUsingFetcher(
   fetcher: ContractCreationFetcher,
   contractAddress: string,
@@ -238,6 +256,29 @@ export const getCreatorTx = async (
 
   return null;
 };
+
+export const getContractCreation = async (
+  chain: Chain,
+  contractAddress: string,
+) => {
+  if (
+    chain.fetchContractCreationTxUsing?.confluxscanApi &&
+    chain?.confluxscanApi?.apiURL
+  ) {
+    const apiKey = process.env[chain.confluxscanApi.apiKeyEnvName || ""];
+    const fetcher = getConfluxscanApiContractCreationFetcher(
+      chain.confluxscanApi.apiURL,
+      apiKey || "",
+      Boolean(chain.corespace),
+    );
+    const result = await getCreatorTxUsingFetcher(fetcher, contractAddress);
+    if (result) {
+      return result;
+    }
+  } else {
+    throw new Error(`Chain ${chain.chainId} does not support fetching contract creation via Scan Open API`);
+  }
+}
 
 /**
  * Finds the transaction that created the contract by lower bound binary searching through the blocks.

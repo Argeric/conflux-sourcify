@@ -297,7 +297,12 @@ export class Chain extends SourcifyChain {
     if (!creatorTx) creatorTx = await this.getTx(transactionHash);
 
     let creationBytecode: string;
-    if (txReceipt.contractAddress !== null) {
+    if (txReceipt.contractAddress !== null
+      && format.hexAddress(txReceipt.contractAddress) === format.hexAddress(address)
+    ) {
+      /*
+      // Two contracts created by the same transaction, one is by EOA and the other is by factory. The contract created by factory is the one we want to verify.
+      // https://evm.confluxscan.org/tx/0x6f3a8fb1f14718ccdd2f35d2c966347d0f02ac912c336d4ace61bd0c430c1a38
       if (
         format.hexAddress(txReceipt.contractAddress) !==
         format.hexAddress(address)
@@ -305,7 +310,8 @@ export class Chain extends SourcifyChain {
         throw new Error(
           `Address of the contract being verified ${address} doesn't match the address ${txReceipt.contractAddress} created by this transaction ${transactionHash}`
         );
-      }
+      } 
+      */
       creationBytecode = creatorTx.data;
       logger.debug("Contract created with an EOA", { address });
     } else {
