@@ -20,8 +20,9 @@ import {
   VerifiedContractMinimal,
 } from "../../routes/types";
 import { VerifyErrorExport } from "../workers/workerTypes";
-import { DatabaseOptions } from "../../config/Loader";
+import { ConfigInstance, DatabaseOptions } from "../../config/Loader";
 import { ConflictError, NotFoundError } from "../../common/errors";
+import { alertErrorImmediately } from "../utils/alert";
 
 export default class StoreBase {
   public database: Dao;
@@ -294,6 +295,7 @@ export default class StoreBase {
     address: string,
     codeHash: string,
     linkChainIds?: number[],
+    creationBytecode?: string,
     jobData?: {
       verificationId: VerificationJobId;
       finishTime: Date;
@@ -327,6 +329,30 @@ export default class StoreBase {
     const { sequelize } = Tables.VerifiedContract;
     if (!sequelize) {
       throw new Error("Failed to init the sequelize.");
+    }
+
+    // Update the creation_values according to the creation_transformations of similar contract, if the creation bytecode is provided
+    if (creationBytecode) {
+      const { creation_transformations, creation_values } = verifiedContract;
+      for (const transformation of creation_transformations || []) {
+        if (transformation.reason === "constructorArguments") {
+          creation_values!.constructorArguments = "0x" + creationBytecode.slice(transformation.offset * 2 + 2)
+        }
+        if (transformation.reason === "cborAuxdata") {
+          const { id, offset } = transformation;
+          const cborAuxdataSimilar = creation_values!.cborAuxdata![id!];
+          creation_values!.cborAuxdata![id!] = "0x" + creationBytecode.slice(
+            offset * 2 + 2,
+            offset * 2 + 2 + cborAuxdataSimilar.slice(2).length,
+          );
+        }
+      }
+    } else {
+      alertErrorImmediately(
+        `CreationBytecodeError`,
+        `Creation bytecode not found for contract ${address} on chain ${chainId}`,
+        Object.keys(ConfigInstance.alert?.channels || {})
+      ).then();
     }
 
     try {

@@ -47,7 +47,7 @@ export async function alertError(
     try {
       const ch = defaultManager().channel(channel);
       if (!ch) {
-        return new Error(`Failed to find alert channel ${channel}`);
+        throw new Error(`Failed to find alert channel ${channel}`);
       }
 
       const url = !urls?.length ? "" : urls[0];
@@ -72,6 +72,34 @@ export async function alertError(
           severity: Severity.High
         } as Notification);
       }
+    } catch (err: any) {
+      errs.push(err.message);
+    }
+  }
+
+  if (errs?.length) {
+    throw new AlertError(errs.join(";"));
+  }
+}
+
+export async function alertErrorImmediately(
+  title: string,
+  content: string,
+  channels: string[],
+) {
+  const errs = [];
+  for (const channel of channels) {
+    try {
+      const ch = defaultManager().channel(channel);
+      if (!ch) {
+        throw new Error(`Failed to find alert channel ${channel}`);
+      }
+
+      await ch.send({
+        title,
+        content,
+        severity: Severity.High
+      } as Notification);
     } catch (err: any) {
       errs.push(err.message);
     }

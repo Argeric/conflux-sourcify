@@ -169,6 +169,7 @@ interface VerifyFromCrossChainRequest extends Request {
   };
   body: {
     linkChainIds?: string;
+    creationTransactionHash?: string;
   };
 }
 
@@ -179,6 +180,8 @@ export async function verifyFromCrossChainEndpoint(
   logger.debug("verifyFromCrossChainEndpoint", {
     chainId: req.params.chainId,
     address: req.params.address,
+    linkChainIds: req.body.linkChainIds,
+    creationTransactionHash: req.body.creationTransactionHash,
   });
 
   const services = req.app.get("services") as Services;
@@ -194,6 +197,7 @@ export async function verifyFromCrossChainEndpoint(
       chain,
       req.params.address,
       linkChainIds,
+      req.body.creationTransactionHash,
     );
 
   res.status(StatusCodes.ACCEPTED).json({ verificationId });
