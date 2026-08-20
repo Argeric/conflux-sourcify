@@ -125,6 +125,47 @@ export default {
       },
       announcement: "0xdf07c798e70138ca6963ea0db3226e124db59ddd",
     },
+    8888: {
+      name: "Conflux coreSpace net8888",
+      supported: true,
+      corespace: true,
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      confluxscanApi: {
+        apiURL: "https://net8888api.confluxscan.org",
+      },
+      rpcs: [
+        {
+          rpc: process.env.CHAIN_8888_RPC_1 || 'http://net8888cfx.confluxrpc.com/',
+          traceSupport: 'trace_transaction',
+        },
+      ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: process.env.CHAIN_8888_ANNOUNCEMENT || "net8888:aasm4c231py7j34fghntcfkdt2nm9xv1tup330k3e4",
+    },
+    8889: {
+      name: "Conflux eSpace net8889",
+      supported: true,
+      fetchContractCreationTxUsing: {
+        confluxscanApi: true
+      },
+      confluxscanApi: {
+        apiURL: "https://net8889api.confluxscan.org",
+      },
+      rpcs: [
+        {
+          rpc: process.env.CHAIN_8889_RPC_1 || "http://net8889eth.confluxrpc.com/",
+          traceSupport: 'trace_transaction',
+        },
+      ],
+      sync: {
+        delayBlocksAgainstLatest: 3,
+      },
+      announcement: process.env.CHAIN_8889_ANNOUNCEMENT || "0x623a0340BD4b0817379C8482C92Dd26fb8C5316d",
+    },
     16602: {
       name: "0G Galileo Testnet",
       supported: true,
