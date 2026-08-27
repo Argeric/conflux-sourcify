@@ -123,7 +123,7 @@ export class Verification {
         }
         compilationTarget = fqn;
       } catch (e: any) {
-        if (e.code === "no_match") {
+        if (e.code === "bytecode_length_mismatch" || e.code === "no_match") {
           continue;
         }
         throw e;

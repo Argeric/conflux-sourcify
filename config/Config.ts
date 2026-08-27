@@ -175,7 +175,7 @@ export default {
       },
       rpcs: [
         {
-          rpc: "http://evmrpc-testnet.0g.ai",
+          rpc: process.env.CHAIN_16602_RPC_1 || "http://evmrpc-testnet.0g.ai",
         }
       ],
     },
@@ -188,7 +188,7 @@ export default {
       },
       rpcs: [
         {
-          rpc: "http://evmrpc.0g.ai",
+          rpc: process.env.CHAIN_16661_RPC_1 || "http://evmrpc.0g.ai",
         }
       ],
     },
@@ -205,7 +205,8 @@ export default {
       },
       rpcs: [
         {
-          rpc: "https://eth.drpc.org",
+          rpc: process.env.CHAIN_1_RPC_1 || "https://eth.drpc.org",
+          traceSupport: 'trace_transaction',
         }
       ],
     },*/
@@ -219,7 +220,7 @@ export default {
       },
       rpcs: [
         {
-          rpc: "https://ethereum-holesky-rpc.publicnode.com",
+          rpc: process.env.CHAIN_17000_RPC_1 || "https://ethereum-holesky-rpc.publicnode.com",
           traceSupport: 'trace_transaction',
         }
       ],
@@ -234,7 +235,22 @@ export default {
       },
       rpcs: [
         {
-          rpc: "https://0xrpc.io/hoodi",
+          rpc: process.env.CHAIN_560048_RPC_1 || "https://0xrpc.io/hoodi",
+          traceSupport: 'trace_transaction',
+        }
+      ],
+    },
+    11155111: {
+      name: "Ethereum sepolia Testnet",
+      supported: true,
+      corespace: false,
+      confluxscanApi: {
+        apiURL: "https://api.etherscan.io/v2",
+        apiKeyEnvName: "ETHERSCAN_API_KEY",
+      },
+      rpcs: [
+        {
+          rpc: process.env.CHAIN_11155111_RPC_1 || "https://ethereum-sepolia-rpc.publicnode.com",
           traceSupport: 'trace_transaction',
         }
       ],
@@ -278,12 +294,12 @@ export default {
       }
     }
   },
-  // log: {
-  //   level: "info",
-  //   alertHook: { // Alert hooking settings
-  //     level: "error", // Hooked logrus level for alert notification
-  //     channels: ["dingrobot"], // Notification channels
-  //     async: false // Async options for sending alert
-  //   }
-  // },
+  log: {
+    level: process.env.LOG_LEVEL || "info",
+    // alertHook: { // Alert hooking settings
+    //   level: "error", // Hooked logrus level for alert notification
+    //   channels: ["dingrobot"], // Notification channels
+    //   async: false // Async options for sending alert
+    // }
+  },
 };
